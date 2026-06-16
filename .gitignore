@@ -1,0 +1,30 @@
+# Dependencies
+/vendor/
+node_modules/
+
+# Environment / secrets
+.env
+
+# Build & release artifacts
+*.zip
+/dist/
+/dist*/
+/wpscm-src-*/
+
+# WordPress test library (installed into the tooling container)
+/wordpress/
+/wordpress-tests-lib/
+
+# PHP tooling caches
+.phpunit.result.cache
+.phpcs-cache
+.php-cs-fixer.cache
+/.phpstan/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+*.swp

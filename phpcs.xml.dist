@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<ruleset name="Sampoorna SEO">
+	<description>Coding standards for the Sampoorna SEO plugin.</description>
+
+	<!-- What to scan. Add new plugin folders here as they are created. -->
+	<file>./sampoorna-seo</file>
+
+	<!-- Ignore everything that isn't plugin source. -->
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/tests/*</exclude-pattern>
+	<exclude-pattern>*/dist*/*</exclude-pattern>
+
+	<arg name="extensions" value="php"/>
+	<arg name="colors"/>
+	<arg value="ps"/><!-- show progress + sources -->
+
+	<!-- WordPress coding standards (core, docs, extra). -->
+	<rule ref="WordPress">
+		<!-- We use a custom DB layer with dbDelta; silence the broad direct-query nags. -->
+		<exclude name="WordPress.DB.DirectDatabaseQuery.DirectQuery"/>
+		<exclude name="WordPress.DB.DirectDatabaseQuery.NoCaching"/>
+	</rule>
+
+	<!-- The sampoorna-seo plugin uses PSR-4 (PascalCase) file/class names, not the
+	     WordPress class-*.php convention; skip the filename sniffs there. -->
+	<rule ref="WordPress.Files.FileName">
+		<exclude-pattern>*/sampoorna-seo/*</exclude-pattern>
+	</rule>
+
+	<!-- PHP 8.1+ compatibility. -->
+	<config name="testVersion" value="8.1-"/>
+	<rule ref="PHPCompatibilityWP"/>
+
+	<!-- Text domain + prefix checks. -->
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="sampoorna-seo"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="sampoorna_seo"/>
+				<element value="SAMPOORNA_SEO"/>
+				<element value="Sampoorna"/>
+			</property>
+		</properties>
+	</rule>
+
+	<config name="minimum_supported_wp_version" value="6.0"/>
+</ruleset>

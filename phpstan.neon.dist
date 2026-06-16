@@ -1,0 +1,15 @@
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+    level: 5
+    paths:
+        - sampoorna-seo
+    excludePaths:
+        - vendor/*
+        - dist*/*
+        - wpscm-src-*/*
+        - tests/*
+    # WordPress core/global constants the analyser shouldn't flag.
+    bootstrapFiles:
+        - tests/phpstan-bootstrap.php

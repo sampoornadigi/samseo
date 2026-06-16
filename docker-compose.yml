@@ -1,0 +1,103 @@
+# Docker dev/test environment for Sampoorna SEO / WP Search Console Manager.
+#
+#   docker compose up -d            # start WordPress + DB + Adminer + tooling
+#   open http://localhost:8080      # WordPress (first run: install wizard)
+#   open http://localhost:8081      # Adminer (DB browser)
+#   make help                       # all convenience commands
+#
+# The PHP "tooling" container holds Composer, PHPCS, PHPStan and the WordPress
+# PHPUnit integration suite. The WordPress container is for manual/visual testing.
+
+services:
+  db:
+    image: mysql:8.0
+    command: ['--default-authentication-plugin=mysql_native_password']
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-wordpress}
+      MYSQL_USER: ${DB_USER:-wordpress}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-wordpress}
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3307:3306"   # host 3307 -> container 3306 (avoids clashing with a local MySQL)
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  wordpress:
+    image: wordpress:php8.1-apache
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: ${DB_USER:-wordpress}
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD:-wordpress}
+      WORDPRESS_DB_NAME: ${DB_NAME:-wordpress}
+      WORDPRESS_DEBUG: 1
+      WORDPRESS_CONFIG_EXTRA: |
+        define( 'WP_DEBUG_LOG', true );
+        define( 'WP_DEBUG_DISPLAY', false );
+        define( 'SCRIPT_DEBUG', true );
+    volumes:
+      - wp_data:/var/www/html
+      # Live-mount plugins under test. Add a line per plugin as the suite grows.
+      - ./sampoorna-seo:/var/www/html/wp-content/plugins/sampoorna-seo
+
+  # WP-CLI. Not started by `up`; invoke with: docker compose run --rm wpcli wp <args>
+  wpcli:
+    image: wordpress:cli-php8.1
+    depends_on:
+      db:
+        condition: service_healthy
+    user: "33:33"   # www-data, matches the wordpress image
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: ${DB_USER:-wordpress}
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD:-wordpress}
+      WORDPRESS_DB_NAME: ${DB_NAME:-wordpress}
+    volumes:
+      - wp_data:/var/www/html
+      - ./sampoorna-seo:/var/www/html/wp-content/plugins/sampoorna-seo
+    profiles: ["cli"]
+
+  adminer:
+    image: adminer:4
+    depends_on:
+      - db
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+
+  # PHP 8.1 + Composer + svn/git + mysql client. Holds PHPCS/PHPStan/PHPUnit.
+  # Stays running so you can `make shell` / exec into it.
+  tooling:
+    build:
+      context: .
+      dockerfile: dev/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    working_dir: /workspace
+    environment:
+      WP_TESTS_DIR: /tmp/wordpress-tests-lib
+      WP_CORE_DIR: /tmp/wordpress
+      WP_TESTS_PHPUNIT_POLYFILLS_PATH: /workspace/vendor/yoast/phpunit-polyfills
+      # Test DB (created by dev/install-wp-tests.sh) — uses root to allow DB creation.
+      WPTESTS_DB_NAME: ${TEST_DB_NAME:-wordpress_test}
+      WPTESTS_DB_USER: root
+      WPTESTS_DB_PASS: ${DB_ROOT_PASSWORD:-root}
+      WPTESTS_DB_HOST: db
+    volumes:
+      - .:/workspace
+    command: ["tail", "-f", "/dev/null"]
+
+volumes:
+  db_data: {}
+  wp_data: {}
