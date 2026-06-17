@@ -24,28 +24,25 @@ class Analyzer {
 	 * Analyze a post against its SEO meta.
 	 *
 	 * @param int                  $post_id Post ID.
-	 * @param array<string,string> $meta   SEO meta (title, desc, focus_keyword, ...) as from MetaStore::all().
+	 * @param array<string,string> $meta    SEO meta (title, desc, focus_keyword, ...) as from MetaStore::all().
+	 * @param string|null          $content Optional content HTML override (live editor recompute); falls back to the saved post content.
 	 * @return array{score:int,checks:array<int,array{id:string,label:string,status:string,msg:string}>}
 	 */
-	public static function analyze( $post_id, array $meta ) {
-		$post = get_post( (int) $post_id );
+	public static function analyze( $post_id, array $meta, $content = null ) {
+		$post         = get_post( (int) $post_id );
+		$content_html = self::resolve_content( $post, $content );
 
 		$title = isset( $meta['title'] ) && '' !== $meta['title'] ? $meta['title'] : ( $post ? get_the_title( $post ) : '' );
 		$desc  = isset( $meta['desc'] ) ? $meta['desc'] : '';
 		$focus = isset( $meta['focus_keyword'] ) ? trim( (string) $meta['focus_keyword'] ) : '';
 
-		$content_text = '';
-		$slug         = '';
-		if ( $post ) {
-			$content_text = wp_strip_all_tags( strip_shortcodes( (string) $post->post_content ) );
-			$content_text = trim( (string) preg_replace( '/\s+/', ' ', $content_text ) );
-			$slug         = (string) $post->post_name;
-		}
-		$word_count = '' === $content_text ? 0 : count( preg_split( '/\s+/', $content_text ) );
-		$first_para = self::first_paragraph( $post );
-		$title_len  = self::len( $title );
-		$desc_len   = self::len( $desc );
-		$has_focus  = '' !== $focus;
+		$content_text = self::plain_text( $content_html );
+		$slug         = $post ? (string) $post->post_name : '';
+		$word_count   = '' === $content_text ? 0 : count( preg_split( '/\s+/', $content_text ) );
+		$first_para   = self::first_paragraph( $content_html );
+		$title_len    = self::len( $title );
+		$desc_len     = self::len( $desc );
+		$has_focus    = '' !== $focus;
 
 		$checks = array();
 
@@ -128,16 +125,27 @@ class Analyzer {
 	}
 
 	/**
-	 * First paragraph of a post as plain text.
+	 * Resolve the content HTML to analyze: an explicit override, else the post content.
 	 *
-	 * @param \WP_Post|null $post Post object.
+	 * @param \WP_Post|null $post     Post object.
+	 * @param string|null   $override Optional content HTML override.
 	 * @return string
 	 */
-	private static function first_paragraph( $post ) {
-		if ( ! $post instanceof \WP_Post ) {
-			return '';
+	private static function resolve_content( $post, $override ) {
+		if ( null !== $override ) {
+			return (string) $override;
 		}
-		$text  = wp_strip_all_tags( strip_shortcodes( (string) $post->post_content ) );
+		return $post instanceof \WP_Post ? (string) $post->post_content : '';
+	}
+
+	/**
+	 * First paragraph of content HTML as plain text.
+	 *
+	 * @param string $content Content HTML.
+	 * @return string
+	 */
+	private static function first_paragraph( $content ) {
+		$text  = wp_strip_all_tags( strip_shortcodes( (string) $content ) );
 		$parts = preg_split( '/\n\s*\n/', trim( $text ) );
 		$first = is_array( $parts ) && isset( $parts[0] ) ? $parts[0] : $text;
 		return trim( (string) preg_replace( '/\s+/', ' ', $first ) );
@@ -225,12 +233,14 @@ class Analyzer {
 	/**
 	 * Readability score (0–100) from sentence/paragraph metrics.
 	 *
-	 * @param int $post_id Post ID.
+	 * @param int         $post_id Post ID.
+	 * @param string|null $content Optional content HTML override; falls back to the saved post content.
 	 * @return array{score:int,checks:array<int,array{id:string,label:string,status:string,msg:string}>}
 	 */
-	public static function readability( $post_id ) {
+	public static function readability( $post_id, $content = null ) {
 		$post      = get_post( (int) $post_id );
-		$text      = $post ? self::plain_text( $post ) : '';
+		$html      = self::resolve_content( $post, $content );
+		$text      = self::plain_text( $html );
 		$words     = self::word_list( $text );
 		$wc        = count( $words );
 		$sentences = self::sentences( $text );
@@ -253,7 +263,7 @@ class Analyzer {
 		}
 		$passive_pct = (int) round( ( $passive / $sc ) * 100 );
 
-		$paragraphs = self::paragraphs( $post );
+		$paragraphs = self::paragraphs( $html );
 		$pc         = max( 1, count( $paragraphs ) );
 		$long_para  = 0;
 		foreach ( $paragraphs as $paragraph ) {
@@ -268,7 +278,7 @@ class Analyzer {
 			$syllables += self::syllables( $word );
 		}
 		$flesch  = $wc > 0 ? (int) round( 206.835 - 1.015 * ( $wc / $sc ) - 84.6 * ( $syllables / $wc ) ) : 0;
-		$has_sub = $post ? count( self::headings( (string) $post->post_content ) ) > 0 : false;
+		$has_sub = count( self::headings( $html ) ) > 0;
 
 		$checks = array(
 			self::make_check( 'flesch', __( 'Reading ease', 'sampoorna-seo' ), $flesch >= 60 ? 'good' : ( $flesch >= 30 ? 'ok' : 'bad' ), sprintf( /* translators: %d: Flesch reading-ease score. */ __( 'Flesch score ~%d (higher is easier).', 'sampoorna-seo' ), $flesch ) ),
@@ -298,12 +308,13 @@ class Analyzer {
 	/**
 	 * AEO score (0–100): how quotable the content is for answer engines.
 	 *
-	 * @param int $post_id Post ID.
+	 * @param int         $post_id Post ID.
+	 * @param string|null $content Optional content HTML override; falls back to the saved post content.
 	 * @return array{score:int,checks:array<int,array{id:string,label:string,status:string,msg:string}>}
 	 */
-	public static function aeo( $post_id ) {
+	public static function aeo( $post_id, $content = null ) {
 		$post     = get_post( (int) $post_id );
-		$content  = $post ? (string) $post->post_content : '';
+		$content  = self::resolve_content( $post, $content );
 		$headings = self::headings( $content );
 
 		$question_headings = array();
@@ -316,7 +327,7 @@ class Analyzer {
 		$has_faq      = count( $question_headings ) >= 2 || 1 === preg_match( '/frequently\s+asked|faq|wp:yoast\/faq-block/i', $content );
 		$has_list     = 1 === preg_match( '/<(ul|ol|table)\b/i', $content );
 
-		$paragraphs = self::paragraphs( $post );
+		$paragraphs = self::paragraphs( $content );
 		$direct     = false;
 		foreach ( array_slice( $paragraphs, 0, 3 ) as $paragraph ) {
 			$len = self::len( $paragraph );
@@ -325,7 +336,7 @@ class Analyzer {
 				break;
 			}
 		}
-		$first    = self::first_paragraph( $post );
+		$first    = self::first_paragraph( $content );
 		$intro_ok = '' !== $first && self::len( $first ) <= 320;
 
 		$checks = array(
@@ -391,13 +402,13 @@ class Analyzer {
 	}
 
 	/**
-	 * Plain text of a post (shortcodes/tags stripped, whitespace collapsed).
+	 * Plain text of content HTML (shortcodes/tags stripped, whitespace collapsed).
 	 *
-	 * @param \WP_Post $post Post.
+	 * @param string $content Content HTML.
 	 * @return string
 	 */
-	private static function plain_text( $post ) {
-		$text = wp_strip_all_tags( strip_shortcodes( (string) $post->post_content ) );
+	private static function plain_text( $content ) {
+		$text = wp_strip_all_tags( strip_shortcodes( (string) $content ) );
 		return trim( (string) preg_replace( '/\s+/', ' ', $text ) );
 	}
 
@@ -502,15 +513,12 @@ class Analyzer {
 	/**
 	 * Paragraph texts: DOM <p> elements, falling back to blank-line splitting.
 	 *
-	 * @param \WP_Post|null $post Post.
+	 * @param string $content Content HTML.
 	 * @return string[]
 	 */
-	private static function paragraphs( $post ) {
-		if ( ! $post instanceof \WP_Post ) {
-			return array();
-		}
+	private static function paragraphs( $content ) {
 		$out = array();
-		$doc = self::dom( (string) $post->post_content );
+		$doc = self::dom( (string) $content );
 		if ( null !== $doc ) {
 			foreach ( $doc->getElementsByTagName( 'p' ) as $el ) {
 				$text = trim( (string) preg_replace( '/\s+/', ' ', $el->textContent ) ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMNode::textContent is a PHP DOM API property.
@@ -520,7 +528,7 @@ class Analyzer {
 			}
 		}
 		if ( empty( $out ) ) {
-			foreach ( preg_split( '/\n\s*\n/', self::plain_text( $post ) ) as $para ) {
+			foreach ( preg_split( '/\n\s*\n/', self::plain_text( $content ) ) as $para ) {
 				$para = trim( (string) $para );
 				if ( '' !== $para ) {
 					$out[] = $para;

@@ -25,9 +25,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class MetaBox {
 
-	const NONCE_ACTION    = 'sampoorna_seo_metabox';
-	const NONCE_FIELD     = 'sampoorna_seo_metabox_nonce';
-	const AI_NONCE_ACTION = 'sampoorna_seo_generate_meta';
+	const NONCE_ACTION       = 'sampoorna_seo_metabox';
+	const NONCE_FIELD        = 'sampoorna_seo_metabox_nonce';
+	const AI_NONCE_ACTION    = 'sampoorna_seo_generate_meta';
+	const SCORE_NONCE_ACTION = 'sampoorna_seo_score';
 
 	/**
 	 * Singleton instance.
@@ -56,6 +57,7 @@ class MetaBox {
 		add_action( 'save_post', array( $this, 'save' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'assets' ) );
 		add_action( 'wp_ajax_sampoorna_seo_generate_meta', array( $this, 'ajax_generate' ) );
+		add_action( 'wp_ajax_sampoorna_seo_score', array( $this, 'ajax_score' ) );
 	}
 
 	/**
@@ -95,12 +97,13 @@ class MetaBox {
 			'sampoorna-seo-editor',
 			'SampoornaSEO',
 			array(
-				'siteName'  => get_bloginfo( 'name' ),
-				'sep'       => TemplateEngine::separator(),
-				'home'      => home_url( '/' ),
-				'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
-				'aiNonce'   => wp_create_nonce( self::AI_NONCE_ACTION ),
-				'aiEnabled' => AiClient::is_configured(),
+				'siteName'   => get_bloginfo( 'name' ),
+				'sep'        => TemplateEngine::separator(),
+				'home'       => home_url( '/' ),
+				'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
+				'aiNonce'    => wp_create_nonce( self::AI_NONCE_ACTION ),
+				'aiEnabled'  => AiClient::is_configured(),
+				'scoreNonce' => wp_create_nonce( self::SCORE_NONCE_ACTION ),
 			)
 		);
 	}
@@ -113,16 +116,12 @@ class MetaBox {
 	 */
 	public function render( $post ) {
 		$meta   = MetaStore::all( $post->ID );
-		$scores = array(
-			array( __( 'On-page', 'sampoorna-seo' ), Analyzer::analyze( $post->ID, $meta ) ),
-			array( __( 'Readability', 'sampoorna-seo' ), Analyzer::readability( $post->ID ) ),
-			array( __( 'AEO', 'sampoorna-seo' ), Analyzer::aeo( $post->ID ) ),
-		);
+		$scores = self::analyze_all( $post->ID, $meta );
 
 		wp_nonce_field( self::NONCE_ACTION, self::NONCE_FIELD );
 		?>
 		<div class="sseo-box">
-			<div class="sseo-scores">
+			<div class="sseo-scores" id="sseo-scores">
 				<?php foreach ( $scores as $s ) : ?>
 					<span class="sseo-score sseo-score--<?php echo esc_attr( self::score_band( $s[1]['score'] ) ); ?>">
 						<span class="sseo-score__num"><?php echo esc_html( (string) $s[1]['score'] ); ?></span>
@@ -192,19 +191,37 @@ class MetaBox {
 				</p>
 			</details>
 
-			<?php foreach ( $scores as $s ) : ?>
-				<p class="sseo-checks__title"><strong><?php echo esc_html( $s[0] ); ?></strong></p>
-				<ul class="sseo-checks">
-					<?php foreach ( $s[1]['checks'] as $check ) : ?>
-						<li class="sseo-check sseo-check--<?php echo esc_attr( $check['status'] ); ?>">
-							<span class="sseo-check__label"><?php echo esc_html( $check['label'] ); ?></span>
-							<span class="sseo-check__msg"><?php echo esc_html( $check['msg'] ); ?></span>
-						</li>
-					<?php endforeach; ?>
-				</ul>
-			<?php endforeach; ?>
+			<div id="sseo-checks">
+				<?php foreach ( $scores as $s ) : ?>
+					<p class="sseo-checks__title"><strong><?php echo esc_html( $s[0] ); ?></strong></p>
+					<ul class="sseo-checks">
+						<?php foreach ( $s[1]['checks'] as $check ) : ?>
+							<li class="sseo-check sseo-check--<?php echo esc_attr( $check['status'] ); ?>">
+								<span class="sseo-check__label"><?php echo esc_html( $check['label'] ); ?></span>
+								<span class="sseo-check__msg"><?php echo esc_html( $check['msg'] ); ?></span>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+				<?php endforeach; ?>
+			</div>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Compute the three labeled score results for a post.
+	 *
+	 * @param int                  $post_id Post ID.
+	 * @param array<string,string> $meta    SEO meta as from MetaStore::all().
+	 * @param string|null          $content Optional content HTML override (live recompute).
+	 * @return array<int,array{0:string,1:array{score:int,checks:array<int,array{id:string,label:string,status:string,msg:string}>}}>
+	 */
+	private static function analyze_all( $post_id, array $meta, $content = null ) {
+		return array(
+			array( __( 'On-page', 'sampoorna-seo' ), Analyzer::analyze( $post_id, $meta, $content ) ),
+			array( __( 'Readability', 'sampoorna-seo' ), Analyzer::readability( $post_id, $content ) ),
+			array( __( 'AEO', 'sampoorna-seo' ), Analyzer::aeo( $post_id, $content ) ),
+		);
 	}
 
 	/**
@@ -271,6 +288,40 @@ class MetaBox {
 				'description' => $result['description'],
 			)
 		);
+	}
+
+	/**
+	 * AJAX: recompute the on-page / readability / AEO scores from live editor input.
+	 *
+	 * @return void
+	 */
+	public function ajax_score() {
+		check_ajax_referer( self::SCORE_NONCE_ACTION, 'nonce' );
+
+		$post_id = isset( $_POST['post_id'] ) ? absint( wp_unslash( $_POST['post_id'] ) ) : 0;
+		if ( ! $post_id || ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'sampoorna-seo' ) ), 403 );
+		}
+
+		$meta = array(
+			'title'         => isset( $_POST['title'] ) ? sanitize_text_field( wp_unslash( $_POST['title'] ) ) : '',
+			'desc'          => isset( $_POST['desc'] ) ? sanitize_textarea_field( wp_unslash( $_POST['desc'] ) ) : '',
+			'focus_keyword' => isset( $_POST['focus_keyword'] ) ? sanitize_text_field( wp_unslash( $_POST['focus_keyword'] ) ) : '',
+		);
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Content is post body HTML; wp_kses_post sanitizes it.
+		$content = isset( $_POST['content'] ) ? wp_kses_post( wp_unslash( $_POST['content'] ) ) : '';
+
+		$scores  = self::analyze_all( $post_id, $meta, $content );
+		$payload = array();
+		foreach ( $scores as $s ) {
+			$payload[] = array(
+				'label'  => $s[0],
+				'score'  => $s[1]['score'],
+				'band'   => self::score_band( $s[1]['score'] ),
+				'checks' => $s[1]['checks'],
+			);
+		}
+		wp_send_json_success( array( 'scores' => $payload ) );
 	}
 
 	/**

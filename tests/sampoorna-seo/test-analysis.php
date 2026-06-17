@@ -68,6 +68,32 @@ class Sampoorna_Seo_Analysis_Test extends WP_UnitTestCase {
 		$this->assertSame( 'good', $rich_status['faq'] );
 	}
 
+	public function test_content_override_scores_unsaved_content() {
+		// Stored content is empty; the override carries the real, structured content.
+		$post_id = self::factory()->post->create( array( 'post_content' => '' ) );
+
+		$rich = "<h2>What is local SEO?</h2>\n"
+			. "<p>Local SEO helps a business appear in nearby searches and map results.</p>\n"
+			. "<ul><li>Claim your profile</li><li>Earn citations</li><li>Collect reviews</li></ul>\n"
+			. "<h2>How do I start?</h2>\n<p>Begin by claiming your profile.</p>";
+
+		$stored_aeo   = Analyzer::aeo( $post_id );
+		$override_aeo = Analyzer::aeo( $post_id, $rich );
+		$this->assertGreaterThan( $stored_aeo['score'], $override_aeo['score'] );
+
+		$status = array();
+		foreach ( $override_aeo['checks'] as $c ) {
+			$status[ $c['id'] ] = $c['status'];
+		}
+		$this->assertSame( 'good', $status['question_heading'] );
+		$this->assertSame( 'good', $status['lists_or_tables'] );
+
+		// Readability likewise reflects the override, not the empty stored content.
+		$override_read = Analyzer::readability( $post_id, $rich );
+		$this->assertIsInt( $override_read['score'] );
+		$this->assertGreaterThan( 0, $override_read['score'] );
+	}
+
 	public function test_aeo_flags_missing_structure() {
 		$thin = self::factory()->post->create(
 			array( 'post_content' => '<p>' . str_repeat( 'plain prose ', 60 ) . '</p>' )
