@@ -76,6 +76,9 @@ function sampoorna_seo_init() {
 	\Sampoorna\SEO\Meta\MetaStore::instance();
 	\Sampoorna\SEO\Meta\Renderer::instance();
 
+	// Technical SEO (Phase 1): paginated XML sitemaps (front-end routing).
+	\Sampoorna\SEO\Technical\Sitemap::instance();
+
 	\Sampoorna\SEO\Integrations\GSC\OAuth::instance();
 	\Sampoorna\SEO\Integrations\GSC\Sync::instance();
 	\Sampoorna\SEO\Integrations\GSC\Inspector::instance();
@@ -115,6 +118,10 @@ function sampoorna_seo_activate() {
 	}
 	// The 15-min schedule is registered on plugins_loaded; the inspection tick
 	// is scheduled in sampoorna_seo_init once that schedule exists.
+
+	// Register sitemap rewrite rules and flush so pretty URLs resolve immediately.
+	\Sampoorna\SEO\Technical\Sitemap::instance()->register_rules();
+	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'sampoorna_seo_activate' );
 
@@ -127,5 +134,7 @@ function sampoorna_seo_deactivate() {
 	wp_clear_scheduled_hook( SAMPOORNA_SEO_CRON_HOOK );
 	wp_clear_scheduled_hook( SAMPOORNA_SEO_INSPECT_HOOK );
 	wp_clear_scheduled_hook( SAMPOORNA_SEO_DIGEST_HOOK );
+	// Remove our sitemap rewrite rules.
+	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'sampoorna_seo_deactivate' );
