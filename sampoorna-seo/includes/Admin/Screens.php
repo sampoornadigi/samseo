@@ -19,6 +19,7 @@ use Sampoorna\SEO\ControlPlane\Keys;
 use Sampoorna\SEO\Ai\AiClient;
 use Sampoorna\SEO\Technical\Robots;
 use Sampoorna\SEO\Technical\IndexNow;
+use Sampoorna\SEO\Schema\Graph;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -154,6 +155,21 @@ class Screens {
 		update_option( Robots::OPT_BODY, $robots );
 		update_option( IndexNow::OPT_ENABLED, isset( $_POST['sampoorna_seo_indexnow_enabled'] ) ? 1 : 0 );
 		IndexNow::ensure_key();
+
+		// Schema / Organization.
+		$org_name = isset( $_POST['sampoorna_seo_org_name'] ) ? sanitize_text_field( wp_unslash( $_POST['sampoorna_seo_org_name'] ) ) : '';
+		update_option( Graph::OPT_ORG_NAME, $org_name );
+		$org_logo = isset( $_POST['sampoorna_seo_org_logo'] ) ? esc_url_raw( wp_unslash( $_POST['sampoorna_seo_org_logo'] ) ) : '';
+		update_option( Graph::OPT_ORG_LOGO, $org_logo );
+		$social_raw = isset( $_POST['sampoorna_seo_social'] ) ? sanitize_textarea_field( wp_unslash( $_POST['sampoorna_seo_social'] ) ) : '';
+		$social     = array();
+		foreach ( preg_split( '/\r\n|\r|\n/', $social_raw ) as $line ) {
+			$line = esc_url_raw( trim( $line ) );
+			if ( '' !== $line ) {
+				$social[] = $line;
+			}
+		}
+		update_option( Graph::OPT_SOCIAL, $social );
 
 		wp_safe_redirect( admin_url( 'admin.php?page=sampoorna-seo-settings&sampoorna_seo_notice=saved' ) );
 		exit;
@@ -648,6 +664,28 @@ class Screens {
 									<a href="<?php echo esc_url( IndexNow::key_file_url() ); ?>" target="_blank"><code><?php echo esc_html( IndexNow::key() . '.txt' ); ?></code></a>
 								</p>
 							<?php endif; ?>
+						</td>
+					</tr>
+				</table>
+
+				<h2><?php esc_html_e( 'Schema / Organization', 'sampoorna-seo' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_org_name"><?php esc_html_e( 'Organization name', 'sampoorna-seo' ); ?></label></th>
+						<td><input name="sampoorna_seo_org_name" id="sampoorna_seo_org_name" type="text" class="regular-text" value="<?php echo esc_attr( get_option( Graph::OPT_ORG_NAME, '' ) ); ?>" placeholder="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_org_logo"><?php esc_html_e( 'Logo URL', 'sampoorna-seo' ); ?></label></th>
+						<td>
+							<input name="sampoorna_seo_org_logo" id="sampoorna_seo_org_logo" type="url" class="regular-text" value="<?php echo esc_attr( get_option( Graph::OPT_ORG_LOGO, '' ) ); ?>" placeholder="<?php echo esc_attr( (string) get_site_icon_url() ); ?>">
+							<p class="description"><?php esc_html_e( 'Used in the Organization schema. Falls back to the site logo/icon.', 'sampoorna-seo' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_social"><?php esc_html_e( 'Social profile URLs', 'sampoorna-seo' ); ?></label></th>
+						<td>
+							<textarea name="sampoorna_seo_social" id="sampoorna_seo_social" class="large-text code" rows="4"><?php echo esc_textarea( implode( "\n", (array) get_option( Graph::OPT_SOCIAL, array() ) ) ); ?></textarea>
+							<p class="description"><?php esc_html_e( 'One URL per line (Facebook, X, LinkedIn, …). Emitted as schema sameAs.', 'sampoorna-seo' ); ?></p>
 						</td>
 					</tr>
 				</table>

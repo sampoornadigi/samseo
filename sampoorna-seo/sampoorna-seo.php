@@ -83,6 +83,9 @@ function sampoorna_seo_init() {
 	\Sampoorna\SEO\Technical\Hreflang::instance();
 	\Sampoorna\SEO\Technical\IndexNow::instance();
 
+	// Schema (Phase 2): connected JSON-LD @graph (front-end).
+	\Sampoorna\SEO\Schema\Graph::instance();
+
 	\Sampoorna\SEO\Integrations\GSC\OAuth::instance();
 	\Sampoorna\SEO\Integrations\GSC\Sync::instance();
 	\Sampoorna\SEO\Integrations\GSC\Inspector::instance();
