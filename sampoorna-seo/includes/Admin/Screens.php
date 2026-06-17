@@ -20,6 +20,7 @@ use Sampoorna\SEO\Ai\AiClient;
 use Sampoorna\SEO\Technical\Robots;
 use Sampoorna\SEO\Technical\IndexNow;
 use Sampoorna\SEO\Schema\Graph;
+use Sampoorna\SEO\Schema\LocalBusiness;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -170,6 +171,26 @@ class Screens {
 			}
 		}
 		update_option( Graph::OPT_SOCIAL, $social );
+
+		// Schema / LocalBusiness (single location).
+		$local_in = isset( $_POST['sampoorna_seo_local'] ) && is_array( $_POST['sampoorna_seo_local'] )
+			? wp_unslash( $_POST['sampoorna_seo_local'] ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each field is sanitized individually below.
+			: array();
+		$type     = isset( $local_in['type'] ) ? sanitize_text_field( $local_in['type'] ) : '';
+		$local    = array(
+			'type'        => array_key_exists( $type, LocalBusiness::types() ) ? $type : '',
+			'street'      => isset( $local_in['street'] ) ? sanitize_text_field( $local_in['street'] ) : '',
+			'locality'    => isset( $local_in['locality'] ) ? sanitize_text_field( $local_in['locality'] ) : '',
+			'region'      => isset( $local_in['region'] ) ? sanitize_text_field( $local_in['region'] ) : '',
+			'postal'      => isset( $local_in['postal'] ) ? sanitize_text_field( $local_in['postal'] ) : '',
+			'country'     => isset( $local_in['country'] ) ? sanitize_text_field( $local_in['country'] ) : '',
+			'telephone'   => isset( $local_in['telephone'] ) ? sanitize_text_field( $local_in['telephone'] ) : '',
+			'lat'         => isset( $local_in['lat'] ) && '' !== trim( (string) $local_in['lat'] ) ? (string) (float) $local_in['lat'] : '',
+			'lng'         => isset( $local_in['lng'] ) && '' !== trim( (string) $local_in['lng'] ) ? (string) (float) $local_in['lng'] : '',
+			'price_range' => isset( $local_in['price_range'] ) ? sanitize_text_field( $local_in['price_range'] ) : '',
+		);
+		// Persist only when at least one field is filled; otherwise clear it.
+		update_option( LocalBusiness::OPT_LOCAL, '' === implode( '', $local ) ? array() : $local );
 
 		wp_safe_redirect( admin_url( 'admin.php?page=sampoorna-seo-settings&sampoorna_seo_notice=saved' ) );
 		exit;
@@ -687,6 +708,58 @@ class Screens {
 							<textarea name="sampoorna_seo_social" id="sampoorna_seo_social" class="large-text code" rows="4"><?php echo esc_textarea( implode( "\n", (array) get_option( Graph::OPT_SOCIAL, array() ) ) ); ?></textarea>
 							<p class="description"><?php esc_html_e( 'One URL per line (Facebook, X, LinkedIn, …). Emitted as schema sameAs.', 'sampoorna-seo' ); ?></p>
 						</td>
+					</tr>
+				</table>
+
+				<h2><?php esc_html_e( 'Local business (single location)', 'sampoorna-seo' ); ?></h2>
+				<p class="description"><?php esc_html_e( 'Optional. Fill these to enrich your Organization schema with NAP, geo, and price-range data (LocalBusiness). Leave blank to skip.', 'sampoorna-seo' ); ?></p>
+				<?php $local = (array) get_option( LocalBusiness::OPT_LOCAL, array() ); ?>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_local_type"><?php esc_html_e( 'Business type', 'sampoorna-seo' ); ?></label></th>
+						<td>
+							<select name="sampoorna_seo_local[type]" id="sampoorna_seo_local_type">
+								<?php foreach ( LocalBusiness::types() as $value => $label ) : ?>
+									<option value="<?php echo esc_attr( $value ); ?>" <?php selected( isset( $local['type'] ) ? $local['type'] : '', $value ); ?>><?php echo esc_html( $label ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_local_street"><?php esc_html_e( 'Street address', 'sampoorna-seo' ); ?></label></th>
+						<td><input name="sampoorna_seo_local[street]" id="sampoorna_seo_local_street" type="text" class="regular-text" value="<?php echo esc_attr( isset( $local['street'] ) ? $local['street'] : '' ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_local_locality"><?php esc_html_e( 'City / locality', 'sampoorna-seo' ); ?></label></th>
+						<td><input name="sampoorna_seo_local[locality]" id="sampoorna_seo_local_locality" type="text" class="regular-text" value="<?php echo esc_attr( isset( $local['locality'] ) ? $local['locality'] : '' ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_local_region"><?php esc_html_e( 'State / region', 'sampoorna-seo' ); ?></label></th>
+						<td><input name="sampoorna_seo_local[region]" id="sampoorna_seo_local_region" type="text" class="regular-text" value="<?php echo esc_attr( isset( $local['region'] ) ? $local['region'] : '' ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_local_postal"><?php esc_html_e( 'Postal code', 'sampoorna-seo' ); ?></label></th>
+						<td><input name="sampoorna_seo_local[postal]" id="sampoorna_seo_local_postal" type="text" class="regular-text" value="<?php echo esc_attr( isset( $local['postal'] ) ? $local['postal'] : '' ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_local_country"><?php esc_html_e( 'Country code', 'sampoorna-seo' ); ?></label></th>
+						<td><input name="sampoorna_seo_local[country]" id="sampoorna_seo_local_country" type="text" class="regular-text" value="<?php echo esc_attr( isset( $local['country'] ) ? $local['country'] : '' ); ?>" placeholder="IN"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_local_telephone"><?php esc_html_e( 'Telephone', 'sampoorna-seo' ); ?></label></th>
+						<td><input name="sampoorna_seo_local[telephone]" id="sampoorna_seo_local_telephone" type="text" class="regular-text" value="<?php echo esc_attr( isset( $local['telephone'] ) ? $local['telephone'] : '' ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_local_lat"><?php esc_html_e( 'Latitude / longitude', 'sampoorna-seo' ); ?></label></th>
+						<td>
+							<input name="sampoorna_seo_local[lat]" id="sampoorna_seo_local_lat" type="text" class="small-text" value="<?php echo esc_attr( isset( $local['lat'] ) ? $local['lat'] : '' ); ?>" placeholder="17.385">
+							<input name="sampoorna_seo_local[lng]" id="sampoorna_seo_local_lng" type="text" class="small-text" value="<?php echo esc_attr( isset( $local['lng'] ) ? $local['lng'] : '' ); ?>" placeholder="78.486">
+							<p class="description"><?php esc_html_e( 'Both required for geo coordinates.', 'sampoorna-seo' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_local_price"><?php esc_html_e( 'Price range', 'sampoorna-seo' ); ?></label></th>
+						<td><input name="sampoorna_seo_local[price_range]" id="sampoorna_seo_local_price" type="text" class="regular-text" value="<?php echo esc_attr( isset( $local['price_range'] ) ? $local['price_range'] : '' ); ?>" placeholder="₹₹"></td>
 					</tr>
 				</table>
 				<?php submit_button( __( 'Save settings', 'sampoorna-seo' ) ); ?>
