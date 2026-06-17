@@ -1,0 +1,142 @@
+/* Sampoorna SEO — post editor meta box styles. */
+
+.sseo-box {
+	font-size: 13px;
+}
+
+.sseo-score {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 6px;
+	padding: 6px 12px;
+	border-radius: 4px;
+	margin-bottom: 12px;
+	color: #fff;
+}
+
+.sseo-score__num {
+	font-size: 20px;
+	font-weight: 700;
+}
+
+.sseo-score--good {
+	background: #1a7f37;
+}
+
+.sseo-score--ok {
+	background: #bf8700;
+}
+
+.sseo-score--bad {
+	background: #b42318;
+}
+
+.sseo-snippet {
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	padding: 12px 14px;
+	margin-bottom: 14px;
+	background: #fff;
+	max-width: 600px;
+}
+
+.sseo-snippet__title {
+	color: #1a0dab;
+	font-size: 18px;
+	line-height: 1.3;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.sseo-snippet__url {
+	color: #006621;
+	font-size: 13px;
+	margin: 2px 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.sseo-snippet__desc {
+	color: #4d5156;
+	font-size: 13px;
+	line-height: 1.45;
+}
+
+.sseo-box label {
+	display: inline-block;
+	margin-bottom: 3px;
+}
+
+.sseo-count {
+	display: inline-block;
+	margin-left: 8px;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.sseo-count--good {
+	color: #1a7f37;
+}
+
+.sseo-count--ok {
+	color: #bf8700;
+}
+
+.sseo-count--bad {
+	color: #b42318;
+}
+
+.sseo-social {
+	margin: 12px 0;
+	border-top: 1px solid #f0f0f1;
+	padding-top: 8px;
+}
+
+.sseo-social summary {
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.sseo-checks {
+	margin: 12px 0 0;
+	padding: 0;
+	list-style: none;
+	border-top: 1px solid #f0f0f1;
+}
+
+.sseo-check {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 5px 0 5px 16px;
+	position: relative;
+	border-bottom: 1px solid #f6f7f7;
+}
+
+.sseo-check::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 11px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+}
+
+.sseo-check--good::before {
+	background: #1a7f37;
+}
+
+.sseo-check--ok::before {
+	background: #bf8700;
+}
+
+.sseo-check--bad::before {
+	background: #b42318;
+}
+
+.sseo-check__msg {
+	color: #646970;
+}

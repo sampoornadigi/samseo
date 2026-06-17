@@ -71,6 +71,11 @@ add_filter( 'cron_schedules', 'sampoorna_seo_cron_schedules' );
  */
 function sampoorna_seo_init() {
 	\Sampoorna\SEO\Core\Database::maybe_upgrade();
+
+	// Meta engine (Phase 0 spine): per-object meta + server-side wp_head output.
+	\Sampoorna\SEO\Meta\MetaStore::instance();
+	\Sampoorna\SEO\Meta\Renderer::instance();
+
 	\Sampoorna\SEO\Integrations\GSC\OAuth::instance();
 	\Sampoorna\SEO\Integrations\GSC\Sync::instance();
 	\Sampoorna\SEO\Integrations\GSC\Inspector::instance();
@@ -78,6 +83,7 @@ function sampoorna_seo_init() {
 	\Sampoorna\SEO\Integrations\GSC\Reports::instance();
 	if ( is_admin() ) {
 		\Sampoorna\SEO\Admin\Screens::instance();
+		\Sampoorna\SEO\Admin\MetaBox::instance();
 	}
 	// Ensure the inspection tick is scheduled (covers upgrades from earlier versions).
 	if ( ! wp_next_scheduled( SAMPOORNA_SEO_INSPECT_HOOK ) ) {
