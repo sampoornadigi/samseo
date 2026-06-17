@@ -81,6 +81,10 @@ function sampoorna_seo_init() {
 	\Sampoorna\SEO\Integrations\GSC\Inspector::instance();
 	\Sampoorna\SEO\Integrations\GSC\Suggestions::instance();
 	\Sampoorna\SEO\Integrations\GSC\Reports::instance();
+
+	// Control-plane handshake: signed REST endpoints (registers on all requests).
+	\Sampoorna\SEO\ControlPlane\Handshake::instance();
+
 	if ( is_admin() ) {
 		\Sampoorna\SEO\Admin\Screens::instance();
 		\Sampoorna\SEO\Admin\MetaBox::instance();
@@ -104,6 +108,8 @@ add_action( 'plugins_loaded', 'sampoorna_seo_init' );
 function sampoorna_seo_activate() {
 	\Sampoorna\SEO\Core\Database::create_tables();
 	update_option( \Sampoorna\SEO\Core\Database::OPT_DB_VERSION, \Sampoorna\SEO\Core\Database::DB_VERSION );
+	// Generate the per-site control-plane HMAC key on first activation.
+	\Sampoorna\SEO\ControlPlane\Keys::ensure_key();
 	if ( ! wp_next_scheduled( SAMPOORNA_SEO_CRON_HOOK ) ) {
 		wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', SAMPOORNA_SEO_CRON_HOOK );
 	}

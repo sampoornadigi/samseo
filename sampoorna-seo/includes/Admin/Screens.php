@@ -15,6 +15,7 @@ use Sampoorna\SEO\Integrations\GSC\Sync;
 use Sampoorna\SEO\Integrations\GSC\Inspector;
 use Sampoorna\SEO\Integrations\GSC\Suggestions;
 use Sampoorna\SEO\Integrations\GSC\Reports;
+use Sampoorna\SEO\ControlPlane\Keys;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -52,6 +53,8 @@ class Screens {
 		add_action( 'admin_post_sampoorna_seo_save_settings', array( $this, 'save_settings' ) );
 		add_action( 'admin_post_sampoorna_seo_select_property', array( $this, 'select_property' ) );
 		add_action( 'admin_post_sampoorna_seo_issue_bulk', array( $this, 'issue_bulk' ) );
+		add_action( 'admin_post_sampoorna_seo_save_control_plane', array( $this, 'save_control_plane' ) );
+		add_action( 'admin_post_sampoorna_seo_rotate_key', array( $this, 'rotate_key' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'assets' ) );
 	}
 
@@ -171,6 +174,35 @@ class Screens {
 		exit;
 	}
 
+	/**
+	 * Saves the control-plane base URL.
+	 *
+	 * @return void
+	 */
+	public function save_control_plane() {
+		if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'sampoorna_seo_save_control_plane' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'sampoorna-seo' ) );
+		}
+		$url = isset( $_POST['sampoorna_seo_cp_url'] ) ? esc_url_raw( wp_unslash( $_POST['sampoorna_seo_cp_url'] ) ) : '';
+		Keys::set_plane_url( $url );
+		wp_safe_redirect( admin_url( 'admin.php?page=sampoorna-seo-settings&sampoorna_seo_notice=cp_saved' ) );
+		exit;
+	}
+
+	/**
+	 * Rotates the per-site control-plane HMAC key.
+	 *
+	 * @return void
+	 */
+	public function rotate_key() {
+		if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'sampoorna_seo_rotate_key' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'sampoorna-seo' ) );
+		}
+		Keys::rotate();
+		wp_safe_redirect( admin_url( 'admin.php?page=sampoorna-seo-settings&sampoorna_seo_notice=key_rotated' ) );
+		exit;
+	}
+
 	/* ---------- Shared bits ---------- */
 
 	/**
@@ -196,6 +228,8 @@ class Screens {
 			'suggestions_generated' => array( 'success', __( 'Suggestions generated.', 'sampoorna-seo' ) ),
 			'suggestions_updated'   => array( 'success', __( 'Suggestions updated.', 'sampoorna-seo' ) ),
 			'digest_sent'           => array( 'success', __( 'Test digest sent.', 'sampoorna-seo' ) ),
+			'cp_saved'              => array( 'success', __( 'Control-plane URL saved.', 'sampoorna-seo' ) ),
+			'key_rotated'           => array( 'success', __( 'A new site key was generated. Re-register its key ID with the control plane.', 'sampoorna-seo' ) ),
 			'digest_failed'         => array( 'error', __( 'Could not send the digest. Check the recipient address and that the site can send email.', 'sampoorna-seo' ) ),
 			'missing_credentials'   => array( 'error', __( 'Enter your Client ID and Secret first.', 'sampoorna-seo' ) ),
 			'bad_state'             => array( 'error', __( 'Security check failed (state mismatch). Try again.', 'sampoorna-seo' ) ),
@@ -372,6 +406,43 @@ class Screens {
 				}
 			endif;
 			?>
+
+			<hr>
+			<h2><?php esc_html_e( 'Control plane', 'sampoorna-seo' ); ?></h2>
+			<p class="description"><?php esc_html_e( 'Connect this site to the Sampoorna control plane. Requests are authenticated with a per-site HMAC key, stored encrypted at rest.', 'sampoorna-seo' ); ?></p>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Site key ID', 'sampoorna-seo' ); ?></th>
+					<td>
+						<code><?php echo esc_html( '' !== Keys::key_id() ? Keys::key_id() : '—' ); ?></code>
+						<?php if ( Keys::is_configured() ) : ?>
+							<span class="dashicons dashicons-yes-alt" style="color:#46b450;"></span> <?php esc_html_e( 'Secret configured.', 'sampoorna-seo' ); ?>
+						<?php else : ?>
+							<em><?php esc_html_e( 'No key generated yet.', 'sampoorna-seo' ); ?></em>
+						<?php endif; ?>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="sampoorna_seo_cp_url"><?php esc_html_e( 'Control-plane URL', 'sampoorna-seo' ); ?></label></th>
+					<td>
+						<form method="post" action="<?php echo $this->action_url( 'sampoorna_seo_save_control_plane' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- action_url() returns an esc_url()-escaped string. ?>">
+							<?php wp_nonce_field( 'sampoorna_seo_save_control_plane' ); ?>
+							<input type="url" id="sampoorna_seo_cp_url" name="sampoorna_seo_cp_url" class="regular-text" value="<?php echo esc_attr( Keys::plane_url() ); ?>" placeholder="https://control.example.com/api" />
+							<?php submit_button( __( 'Save URL', 'sampoorna-seo' ), 'secondary', '', false ); ?>
+						</form>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Rotate key', 'sampoorna-seo' ); ?></th>
+					<td>
+						<form method="post" action="<?php echo $this->action_url( 'sampoorna_seo_rotate_key' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- action_url() returns an esc_url()-escaped string. ?>">
+							<?php wp_nonce_field( 'sampoorna_seo_rotate_key' ); ?>
+							<button class="button button-secondary"><?php esc_html_e( 'Generate a new site key', 'sampoorna-seo' ); ?></button>
+							<span class="description"><?php esc_html_e( 'Invalidates the current key.', 'sampoorna-seo' ); ?></span>
+						</form>
+					</td>
+				</tr>
+			</table>
 		</div>
 		<?php
 	}
