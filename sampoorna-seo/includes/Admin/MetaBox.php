@@ -112,15 +112,23 @@ class MetaBox {
 	 * @return void
 	 */
 	public function render( $post ) {
-		$meta  = MetaStore::all( $post->ID );
-		$score = Analyzer::analyze( $post->ID, $meta );
+		$meta   = MetaStore::all( $post->ID );
+		$scores = array(
+			array( __( 'On-page', 'sampoorna-seo' ), Analyzer::analyze( $post->ID, $meta ) ),
+			array( __( 'Readability', 'sampoorna-seo' ), Analyzer::readability( $post->ID ) ),
+			array( __( 'AEO', 'sampoorna-seo' ), Analyzer::aeo( $post->ID ) ),
+		);
 
 		wp_nonce_field( self::NONCE_ACTION, self::NONCE_FIELD );
 		?>
 		<div class="sseo-box">
-			<div class="sseo-score sseo-score--<?php echo esc_attr( self::score_band( $score['score'] ) ); ?>">
-				<span class="sseo-score__num"><?php echo esc_html( (string) $score['score'] ); ?></span>
-				<span class="sseo-score__label"><?php esc_html_e( 'On-page score', 'sampoorna-seo' ); ?></span>
+			<div class="sseo-scores">
+				<?php foreach ( $scores as $s ) : ?>
+					<span class="sseo-score sseo-score--<?php echo esc_attr( self::score_band( $s[1]['score'] ) ); ?>">
+						<span class="sseo-score__num"><?php echo esc_html( (string) $s[1]['score'] ); ?></span>
+						<span class="sseo-score__label"><?php echo esc_html( $s[0] ); ?></span>
+					</span>
+				<?php endforeach; ?>
 			</div>
 
 			<div class="sseo-snippet">
@@ -184,14 +192,17 @@ class MetaBox {
 				</p>
 			</details>
 
-			<ul class="sseo-checks">
-				<?php foreach ( $score['checks'] as $check ) : ?>
-					<li class="sseo-check sseo-check--<?php echo esc_attr( $check['status'] ); ?>">
-						<span class="sseo-check__label"><?php echo esc_html( $check['label'] ); ?></span>
-						<span class="sseo-check__msg"><?php echo esc_html( $check['msg'] ); ?></span>
-					</li>
-				<?php endforeach; ?>
-			</ul>
+			<?php foreach ( $scores as $s ) : ?>
+				<p class="sseo-checks__title"><strong><?php echo esc_html( $s[0] ); ?></strong></p>
+				<ul class="sseo-checks">
+					<?php foreach ( $s[1]['checks'] as $check ) : ?>
+						<li class="sseo-check sseo-check--<?php echo esc_attr( $check['status'] ); ?>">
+							<span class="sseo-check__label"><?php echo esc_html( $check['label'] ); ?></span>
+							<span class="sseo-check__msg"><?php echo esc_html( $check['msg'] ); ?></span>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endforeach; ?>
 		</div>
 		<?php
 	}
