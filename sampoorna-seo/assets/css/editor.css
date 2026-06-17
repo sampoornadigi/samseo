@@ -140,3 +140,21 @@
 .sseo-check__msg {
 	color: #646970;
 }
+
+.sseo-ai {
+	margin: 12px 0;
+}
+
+.sseo-ai__msg {
+	display: inline-block;
+	margin-left: 8px;
+	font-size: 12px;
+}
+
+.sseo-ai__msg--ok {
+	color: #1a7f37;
+}
+
+.sseo-ai__msg--err {
+	color: #b42318;
+}

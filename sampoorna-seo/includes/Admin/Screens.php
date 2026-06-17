@@ -16,6 +16,7 @@ use Sampoorna\SEO\Integrations\GSC\Inspector;
 use Sampoorna\SEO\Integrations\GSC\Suggestions;
 use Sampoorna\SEO\Integrations\GSC\Reports;
 use Sampoorna\SEO\ControlPlane\Keys;
+use Sampoorna\SEO\Ai\AiClient;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -130,6 +131,16 @@ class Screens {
 
 		// Apply the schedule to match the saved settings.
 		Reports::reschedule();
+
+		// AI layer: only overwrite the key when a new value is entered.
+		$ai_key = isset( $_POST['sampoorna_seo_ai_api_key'] ) ? sanitize_text_field( wp_unslash( $_POST['sampoorna_seo_ai_api_key'] ) ) : '';
+		if ( '' !== $ai_key ) {
+			update_option( AiClient::OPT_API_KEY, Crypto::encrypt( $ai_key ), false );
+		}
+		$ai_model = isset( $_POST['sampoorna_seo_ai_model'] ) ? sanitize_text_field( wp_unslash( $_POST['sampoorna_seo_ai_model'] ) ) : '';
+		if ( in_array( $ai_model, AiClient::allowed_models(), true ) ) {
+			update_option( AiClient::OPT_MODEL, $ai_model, false );
+		}
 
 		wp_safe_redirect( admin_url( 'admin.php?page=sampoorna-seo-settings&sampoorna_seo_notice=saved' ) );
 		exit;
@@ -341,6 +352,27 @@ class Screens {
 						<td>
 							<input name="sampoorna_seo_digest_email" id="sampoorna_seo_digest_email" type="email" class="regular-text" value="<?php echo esc_attr( get_option( Reports::OPT_EMAIL, '' ) ); ?>" placeholder="<?php echo esc_attr( get_option( 'admin_email' ) ); ?>">
 							<p class="description"><?php esc_html_e( 'Leave blank to use the site admin email.', 'sampoorna-seo' ); ?></p>
+						</td>
+					</tr>
+				</table>
+
+				<h2><?php esc_html_e( 'AI', 'sampoorna-seo' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_ai_api_key"><?php esc_html_e( 'Anthropic API key', 'sampoorna-seo' ); ?></label></th>
+						<td>
+							<input name="sampoorna_seo_ai_api_key" id="sampoorna_seo_ai_api_key" type="password" class="regular-text" value="" autocomplete="off" placeholder="<?php echo AiClient::is_configured() ? esc_attr__( '•••••••• (stored — leave blank to keep)', 'sampoorna-seo' ) : 'sk-ant-...'; ?>">
+							<p class="description"><?php esc_html_e( 'Powers one-click AI title & meta generation in the post editor. Stored encrypted.', 'sampoorna-seo' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_ai_model"><?php esc_html_e( 'Model', 'sampoorna-seo' ); ?></label></th>
+						<td>
+							<select name="sampoorna_seo_ai_model" id="sampoorna_seo_ai_model">
+								<?php foreach ( AiClient::allowed_models() as $model_id ) : ?>
+									<option value="<?php echo esc_attr( $model_id ); ?>" <?php selected( AiClient::model(), $model_id ); ?>><?php echo esc_html( $model_id ); ?></option>
+								<?php endforeach; ?>
+							</select>
 						</td>
 					</tr>
 				</table>

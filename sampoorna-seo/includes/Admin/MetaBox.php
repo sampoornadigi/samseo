@@ -14,6 +14,7 @@ namespace Sampoorna\SEO\Admin;
 use Sampoorna\SEO\Meta\MetaStore;
 use Sampoorna\SEO\Meta\TemplateEngine;
 use Sampoorna\SEO\Content\Analyzer;
+use Sampoorna\SEO\Ai\AiClient;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -24,8 +25,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class MetaBox {
 
-	const NONCE_ACTION = 'sampoorna_seo_metabox';
-	const NONCE_FIELD  = 'sampoorna_seo_metabox_nonce';
+	const NONCE_ACTION    = 'sampoorna_seo_metabox';
+	const NONCE_FIELD     = 'sampoorna_seo_metabox_nonce';
+	const AI_NONCE_ACTION = 'sampoorna_seo_generate_meta';
 
 	/**
 	 * Singleton instance.
@@ -53,6 +55,7 @@ class MetaBox {
 		add_action( 'add_meta_boxes', array( $this, 'add_box' ) );
 		add_action( 'save_post', array( $this, 'save' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'assets' ) );
+		add_action( 'wp_ajax_sampoorna_seo_generate_meta', array( $this, 'ajax_generate' ) );
 	}
 
 	/**
@@ -92,9 +95,12 @@ class MetaBox {
 			'sampoorna-seo-editor',
 			'SampoornaSEO',
 			array(
-				'siteName' => get_bloginfo( 'name' ),
-				'sep'      => TemplateEngine::separator(),
-				'home'     => home_url( '/' ),
+				'siteName'  => get_bloginfo( 'name' ),
+				'sep'       => TemplateEngine::separator(),
+				'home'      => home_url( '/' ),
+				'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
+				'aiNonce'   => wp_create_nonce( self::AI_NONCE_ACTION ),
+				'aiEnabled' => AiClient::is_configured(),
 			)
 		);
 	}
@@ -122,6 +128,17 @@ class MetaBox {
 				<div class="sseo-snippet__url" id="sseo-snippet-url"></div>
 				<div class="sseo-snippet__desc" id="sseo-snippet-desc"></div>
 			</div>
+
+			<?php if ( AiClient::is_configured() ) : ?>
+				<p class="sseo-ai">
+					<button type="button" class="button" id="sseo-ai-generate" data-post="<?php echo esc_attr( (string) $post->ID ); ?>">
+						<span class="dashicons dashicons-superhero" style="vertical-align:text-bottom;"></span>
+						<?php esc_html_e( 'Generate with AI', 'sampoorna-seo' ); ?>
+					</button>
+					<span class="sseo-ai__msg" id="sseo-ai-msg"></span>
+					<span class="description"><?php esc_html_e( 'Suggestions only — review and save.', 'sampoorna-seo' ); ?></span>
+				</p>
+			<?php endif; ?>
 
 			<p>
 				<label for="sseo-title"><strong><?php esc_html_e( 'SEO title', 'sampoorna-seo' ); ?></strong></label>
@@ -212,6 +229,35 @@ class MetaBox {
 				'og_image'        => isset( $raw['og_image'] ) ? $raw['og_image'] : '',
 				'robots_noindex'  => isset( $raw['robots_noindex'] ) ? '1' : '',
 				'robots_nofollow' => isset( $raw['robots_nofollow'] ) ? '1' : '',
+			)
+		);
+	}
+
+	/**
+	 * AJAX: generate an AI title + meta description for a post.
+	 *
+	 * Returns suggestions only (human-in-the-loop) — never saves.
+	 *
+	 * @return void
+	 */
+	public function ajax_generate() {
+		check_ajax_referer( self::AI_NONCE_ACTION, 'nonce' );
+
+		$post_id = isset( $_POST['post_id'] ) ? absint( wp_unslash( $_POST['post_id'] ) ) : 0;
+		if ( ! $post_id || ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'sampoorna-seo' ) ), 403 );
+		}
+
+		$focus  = isset( $_POST['focus_keyword'] ) ? sanitize_text_field( wp_unslash( $_POST['focus_keyword'] ) ) : '';
+		$result = AiClient::generate_title_meta( $post_id, $focus );
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		}
+
+		wp_send_json_success(
+			array(
+				'title'       => $result['title'],
+				'description' => $result['description'],
 			)
 		);
 	}
