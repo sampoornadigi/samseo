@@ -76,8 +76,9 @@ function sampoorna_seo_init() {
 	\Sampoorna\SEO\Meta\MetaStore::instance();
 	\Sampoorna\SEO\Meta\Renderer::instance();
 
-	// Technical SEO (Phase 1): paginated XML sitemaps (front-end routing).
+	// Technical SEO (Phase 1): paginated XML sitemaps + redirect manager / 404 monitor.
 	\Sampoorna\SEO\Technical\Sitemap::instance();
+	\Sampoorna\SEO\Technical\Redirects::instance();
 
 	\Sampoorna\SEO\Integrations\GSC\OAuth::instance();
 	\Sampoorna\SEO\Integrations\GSC\Sync::instance();

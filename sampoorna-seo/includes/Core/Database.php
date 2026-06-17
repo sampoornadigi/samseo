@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Database {
 
 	/** Bump when table structure changes so the upgrade routine re-runs dbDelta. */
-	const DB_VERSION     = '1';
+	const DB_VERSION     = '2';
 	const OPT_DB_VERSION = 'sampoorna_seo_db_version';
 
 	/**
@@ -74,6 +74,26 @@ class Database {
 	}
 
 	/**
+	 * Fully-qualified redirects table name.
+	 *
+	 * @return string
+	 */
+	public static function redirects_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'sampoorna_seo_redirects';
+	}
+
+	/**
+	 * Fully-qualified 404-log table name.
+	 *
+	 * @return string
+	 */
+	public static function not_found_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'sampoorna_seo_not_found';
+	}
+
+	/**
 	 * Run table creation if the plugin DB version changed. Cheap to call on load.
 	 *
 	 * @return void
@@ -100,6 +120,8 @@ class Database {
 		$issues          = self::issues_table();
 		$queue           = self::queue_table();
 		$sugg            = self::suggestions_table();
+		$redirects       = self::redirects_table();
+		$not_found       = self::not_found_table();
 
 		$sql = array();
 
@@ -190,6 +212,37 @@ class Database {
 			PRIMARY KEY  (id),
 			UNIQUE KEY uniq_sugg (sugg_hash),
 			KEY status_type (status, type)
+		) {$charset_collate};";
+
+		$sql[] = "CREATE TABLE {$redirects} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			source VARCHAR(512) NOT NULL,
+			source_hash CHAR(32) NOT NULL,
+			target VARCHAR(512) NOT NULL DEFAULT '',
+			type SMALLINT UNSIGNED NOT NULL DEFAULT 301,
+			is_regex TINYINT(1) NOT NULL DEFAULT 0,
+			status VARCHAR(20) NOT NULL DEFAULT 'active',
+			hits BIGINT UNSIGNED NOT NULL DEFAULT 0,
+			created_at DATETIME NOT NULL,
+			last_matched DATETIME NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY uniq_source (source_hash),
+			KEY status (status)
+		) {$charset_collate};";
+
+		$sql[] = "CREATE TABLE {$not_found} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			url VARCHAR(512) NOT NULL,
+			url_hash CHAR(32) NOT NULL,
+			hits BIGINT UNSIGNED NOT NULL DEFAULT 0,
+			referrer VARCHAR(512) NOT NULL DEFAULT '',
+			user_agent VARCHAR(255) NOT NULL DEFAULT '',
+			status VARCHAR(20) NOT NULL DEFAULT 'new',
+			first_seen DATETIME NOT NULL,
+			last_seen DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY uniq_url (url_hash),
+			KEY status (status)
 		) {$charset_collate};";
 
 		foreach ( $sql as $stmt ) {
@@ -614,5 +667,233 @@ class Database {
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- All values (status, updated_at and the IN list) are prepared via the spread $args; the sniff cannot count the dynamically generated %d placeholders.
 			$wpdb->prepare( $sql, ...$args )
 		);
+	}
+
+	/* ---------- Redirects (Phase 1) ---------- */
+
+	/**
+	 * All active redirects, ordered exact-first then by id (for the matcher).
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function active_redirects() {
+		global $wpdb;
+		$table = self::redirects_table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from $wpdb->prefix is safe; query has no dynamic values.
+		$rows = $wpdb->get_results( "SELECT * FROM {$table} WHERE status='active' ORDER BY is_regex ASC, id ASC", ARRAY_A );
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
+	 * Fetch redirects with optional status filter.
+	 *
+	 * @param array $args status|limit.
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function get_redirects( array $args = array() ) {
+		global $wpdb;
+		$table  = self::redirects_table();
+		$status = isset( $args['status'] ) ? (string) $args['status'] : 'all';
+		$limit  = (int) ( $args['limit'] ?? 200 );
+
+		if ( 'all' === $status ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from $wpdb->prefix is safe; limit is prepared.
+			$sql = $wpdb->prepare( "SELECT * FROM {$table} ORDER BY id DESC LIMIT %d", $limit );
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from $wpdb->prefix is safe; values are prepared.
+			$sql = $wpdb->prepare( "SELECT * FROM {$table} WHERE status=%s ORDER BY id DESC LIMIT %d", $status, $limit );
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- $sql is prepared above.
+		$rows = $wpdb->get_results( $sql, ARRAY_A );
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
+	 * Insert a redirect (non-regex deduped by source_hash). Returns insert id or 0.
+	 *
+	 * @param array $data source|target|type|is_regex.
+	 * @return int
+	 */
+	public static function insert_redirect( array $data ) {
+		global $wpdb;
+		$source   = (string) ( $data['source'] ?? '' );
+		$is_regex = ! empty( $data['is_regex'] ) ? 1 : 0;
+		if ( '' === $source ) {
+			return 0;
+		}
+		$wpdb->insert(
+			self::redirects_table(),
+			array(
+				'source'      => $source,
+				'source_hash' => md5( $source ),
+				'target'      => (string) ( $data['target'] ?? '' ),
+				'type'        => (int) ( $data['type'] ?? 301 ),
+				'is_regex'    => $is_regex,
+				'status'      => 'active',
+				'hits'        => 0,
+				'created_at'  => current_time( 'mysql' ),
+			),
+			array( '%s', '%s', '%s', '%d', '%d', '%s', '%d', '%s' )
+		);
+		self::bump_redirects_cache();
+		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Delete redirects by id.
+	 *
+	 * @param int[] $ids Redirect IDs.
+	 * @return void
+	 */
+	public static function delete_redirects( array $ids ) {
+		global $wpdb;
+		$ids = array_filter( array_map( 'absint', $ids ) );
+		if ( empty( $ids ) ) {
+			return;
+		}
+		$table        = self::redirects_table();
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from $wpdb->prefix is safe; placeholders are literal %d tokens.
+		$sql = "DELETE FROM {$table} WHERE id IN ($placeholders)";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- IDs are prepared via the spread args.
+		$wpdb->query( $wpdb->prepare( $sql, ...$ids ) );
+		self::bump_redirects_cache();
+	}
+
+	/**
+	 * Set status for a set of redirect IDs.
+	 *
+	 * @param int[]  $ids    Redirect IDs.
+	 * @param string $status active|disabled.
+	 * @return void
+	 */
+	public static function set_redirect_status( array $ids, $status ) {
+		global $wpdb;
+		$ids = array_filter( array_map( 'absint', $ids ) );
+		if ( empty( $ids ) ) {
+			return;
+		}
+		$table        = self::redirects_table();
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$args         = array_merge( array( $status ), $ids );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from $wpdb->prefix is safe; placeholders are literal %d tokens.
+		$sql = "UPDATE {$table} SET status=%s WHERE id IN ($placeholders)";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- All values prepared via the spread $args.
+		$wpdb->query( $wpdb->prepare( $sql, ...$args ) );
+		self::bump_redirects_cache();
+	}
+
+	/**
+	 * Record a redirect hit.
+	 *
+	 * @param int $id Redirect ID.
+	 * @return void
+	 */
+	public static function touch_redirect( $id ) {
+		global $wpdb;
+		$table = self::redirects_table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from $wpdb->prefix is safe; values are prepared.
+		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET hits = hits + 1, last_matched = %s WHERE id = %d", current_time( 'mysql' ), (int) $id ) );
+	}
+
+	/**
+	 * Bump the cached-active-redirects version (used by the front-end matcher cache).
+	 *
+	 * @return void
+	 */
+	private static function bump_redirects_cache() {
+		delete_transient( 'sampoorna_seo_redirects_active' );
+	}
+
+	/* ---------- 404 log (Phase 1) ---------- */
+
+	/**
+	 * Record a not-found URL (upsert; increments hits on repeat).
+	 *
+	 * @param string $url       Requested path.
+	 * @param string $referrer  Referrer.
+	 * @param string $user_agent User agent.
+	 * @return void
+	 */
+	public static function log_not_found( $url, $referrer = '', $user_agent = '' ) {
+		global $wpdb;
+		$url = (string) $url;
+		if ( '' === $url ) {
+			return;
+		}
+		$now   = current_time( 'mysql' );
+		$table = self::not_found_table();
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from $wpdb->prefix is safe; values are prepared.
+		$sql = "INSERT INTO {$table} (url,url_hash,hits,referrer,user_agent,status,first_seen,last_seen)
+				 VALUES (%s,%s,1,%s,%s,'new',%s,%s)
+				 ON DUPLICATE KEY UPDATE hits = hits + 1, last_seen = VALUES(last_seen), referrer = VALUES(referrer)";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- $sql contains only a safe $wpdb->prefix table name; all values are prepared.
+		$wpdb->query( $wpdb->prepare( $sql, $url, md5( $url ), $referrer, $user_agent, $now, $now ) );
+	}
+
+	/**
+	 * Fetch 404-log rows with optional status filter.
+	 *
+	 * @param array $args status|limit.
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function get_not_found( array $args = array() ) {
+		global $wpdb;
+		$table  = self::not_found_table();
+		$status = isset( $args['status'] ) ? (string) $args['status'] : 'new';
+		$limit  = (int) ( $args['limit'] ?? 200 );
+
+		if ( 'all' === $status ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from $wpdb->prefix is safe; limit is prepared.
+			$sql = $wpdb->prepare( "SELECT * FROM {$table} ORDER BY last_seen DESC LIMIT %d", $limit );
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from $wpdb->prefix is safe; values are prepared.
+			$sql = $wpdb->prepare( "SELECT * FROM {$table} WHERE status=%s ORDER BY last_seen DESC LIMIT %d", $status, $limit );
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- $sql is prepared above.
+		$rows = $wpdb->get_results( $sql, ARRAY_A );
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
+	 * Delete 404-log rows by id.
+	 *
+	 * @param int[] $ids Row IDs.
+	 * @return void
+	 */
+	public static function delete_not_found( array $ids ) {
+		global $wpdb;
+		$ids = array_filter( array_map( 'absint', $ids ) );
+		if ( empty( $ids ) ) {
+			return;
+		}
+		$table        = self::not_found_table();
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from $wpdb->prefix is safe; placeholders are literal %d tokens.
+		$sql = "DELETE FROM {$table} WHERE id IN ($placeholders)";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- IDs are prepared via the spread args.
+		$wpdb->query( $wpdb->prepare( $sql, ...$ids ) );
+	}
+
+	/**
+	 * Set status for a set of 404-log IDs.
+	 *
+	 * @param int[]  $ids    Row IDs.
+	 * @param string $status new|ignored|redirected.
+	 * @return void
+	 */
+	public static function set_not_found_status( array $ids, $status ) {
+		global $wpdb;
+		$ids = array_filter( array_map( 'absint', $ids ) );
+		if ( empty( $ids ) ) {
+			return;
+		}
+		$table        = self::not_found_table();
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$args         = array_merge( array( $status ), $ids );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from $wpdb->prefix is safe; placeholders are literal %d tokens.
+		$sql = "UPDATE {$table} SET status=%s WHERE id IN ($placeholders)";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- All values prepared via the spread $args.
+		$wpdb->query( $wpdb->prepare( $sql, ...$args ) );
 	}
 }

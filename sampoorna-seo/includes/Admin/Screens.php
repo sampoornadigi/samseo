@@ -56,6 +56,9 @@ class Screens {
 		add_action( 'admin_post_sampoorna_seo_issue_bulk', array( $this, 'issue_bulk' ) );
 		add_action( 'admin_post_sampoorna_seo_save_control_plane', array( $this, 'save_control_plane' ) );
 		add_action( 'admin_post_sampoorna_seo_rotate_key', array( $this, 'rotate_key' ) );
+		add_action( 'admin_post_sampoorna_seo_add_redirect', array( $this, 'add_redirect' ) );
+		add_action( 'admin_post_sampoorna_seo_redirect_bulk', array( $this, 'redirect_bulk' ) );
+		add_action( 'admin_post_sampoorna_seo_not_found_bulk', array( $this, 'not_found_bulk' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'assets' ) );
 	}
 
@@ -78,6 +81,8 @@ class Screens {
 		add_submenu_page( 'sampoorna-seo-dashboard', __( 'Performance', 'sampoorna-seo' ), __( 'Performance', 'sampoorna-seo' ), 'manage_options', 'sampoorna-seo-performance', array( $this, 'render_performance' ) );
 		add_submenu_page( 'sampoorna-seo-dashboard', __( 'Issues', 'sampoorna-seo' ), __( 'Issues', 'sampoorna-seo' ), 'manage_options', 'sampoorna-seo-issues', array( $this, 'render_issues' ) );
 		add_submenu_page( 'sampoorna-seo-dashboard', __( 'Suggestions', 'sampoorna-seo' ), __( 'Suggestions', 'sampoorna-seo' ), 'manage_options', 'sampoorna-seo-suggestions', array( $this, 'render_suggestions' ) );
+		add_submenu_page( 'sampoorna-seo-dashboard', __( 'Redirects', 'sampoorna-seo' ), __( 'Redirects', 'sampoorna-seo' ), 'manage_options', 'sampoorna-seo-redirects', array( $this, 'render_redirects' ) );
+		add_submenu_page( 'sampoorna-seo-dashboard', __( '404 Log', 'sampoorna-seo' ), __( '404 Log', 'sampoorna-seo' ), 'manage_options', 'sampoorna-seo-404-log', array( $this, 'render_404_log' ) );
 		add_submenu_page( 'sampoorna-seo-dashboard', __( 'Settings', 'sampoorna-seo' ), __( 'Settings', 'sampoorna-seo' ), 'manage_options', 'sampoorna-seo-settings', array( $this, 'render_settings' ) );
 	}
 
@@ -214,6 +219,95 @@ class Screens {
 		exit;
 	}
 
+	/**
+	 * Allowed redirect status codes.
+	 *
+	 * @return int[]
+	 */
+	private static function redirect_types() {
+		return array( 301, 302, 307, 410 );
+	}
+
+	/**
+	 * Adds a redirect from the Redirects screen form.
+	 *
+	 * @return void
+	 */
+	public function add_redirect() {
+		if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'sampoorna_seo_add_redirect' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'sampoorna-seo' ) );
+		}
+		$source   = isset( $_POST['source'] ) ? sanitize_text_field( wp_unslash( $_POST['source'] ) ) : '';
+		$type     = isset( $_POST['type'] ) ? absint( $_POST['type'] ) : 301;
+		$is_regex = isset( $_POST['is_regex'] ) ? 1 : 0;
+		$target   = isset( $_POST['target'] ) ? sanitize_text_field( wp_unslash( $_POST['target'] ) ) : '';
+
+		if ( ! in_array( $type, self::redirect_types(), true ) ) {
+			$type = 301;
+		}
+		// 410 needs no target; others require both.
+		if ( '' === $source || ( 410 !== $type && '' === $target ) ) {
+			wp_safe_redirect( admin_url( 'admin.php?page=sampoorna-seo-redirects&sampoorna_seo_notice=redirect_invalid' ) );
+			exit;
+		}
+		Database::insert_redirect(
+			array(
+				'source'   => $source,
+				'target'   => 410 === $type ? '' : $target,
+				'type'     => $type,
+				'is_regex' => $is_regex,
+			)
+		);
+		wp_safe_redirect( admin_url( 'admin.php?page=sampoorna-seo-redirects&sampoorna_seo_notice=redirect_added' ) );
+		exit;
+	}
+
+	/**
+	 * Applies a bulk action to selected redirects.
+	 *
+	 * @return void
+	 */
+	public function redirect_bulk() {
+		if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'sampoorna_seo_redirect_bulk' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'sampoorna-seo' ) );
+		}
+		$ids    = isset( $_POST['redirect'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['redirect'] ) ) : array();
+		$action = isset( $_POST['bulk_action'] ) ? sanitize_key( $_POST['bulk_action'] ) : '';
+		if ( $ids ) {
+			if ( 'delete' === $action ) {
+				Database::delete_redirects( $ids );
+			} elseif ( 'enable' === $action ) {
+				Database::set_redirect_status( $ids, 'active' );
+			} elseif ( 'disable' === $action ) {
+				Database::set_redirect_status( $ids, 'disabled' );
+			}
+		}
+		wp_safe_redirect( admin_url( 'admin.php?page=sampoorna-seo-redirects&sampoorna_seo_notice=redirects_updated' ) );
+		exit;
+	}
+
+	/**
+	 * Applies a bulk action to selected 404-log rows.
+	 *
+	 * @return void
+	 */
+	public function not_found_bulk() {
+		if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'sampoorna_seo_not_found_bulk' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'sampoorna-seo' ) );
+		}
+		$ids    = isset( $_POST['row'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['row'] ) ) : array();
+		$action = isset( $_POST['bulk_action'] ) ? sanitize_key( $_POST['bulk_action'] ) : '';
+		if ( $ids ) {
+			if ( 'delete' === $action ) {
+				Database::delete_not_found( $ids );
+			} elseif ( 'ignore' === $action ) {
+				Database::set_not_found_status( $ids, 'ignored' );
+			}
+		}
+		wp_safe_redirect( admin_url( 'admin.php?page=sampoorna-seo-404-log&sampoorna_seo_notice=not_found_updated' ) );
+		exit;
+	}
+
 	/* ---------- Shared bits ---------- */
 
 	/**
@@ -241,6 +335,10 @@ class Screens {
 			'digest_sent'           => array( 'success', __( 'Test digest sent.', 'sampoorna-seo' ) ),
 			'cp_saved'              => array( 'success', __( 'Control-plane URL saved.', 'sampoorna-seo' ) ),
 			'key_rotated'           => array( 'success', __( 'A new site key was generated. Re-register its key ID with the control plane.', 'sampoorna-seo' ) ),
+			'redirect_added'        => array( 'success', __( 'Redirect added.', 'sampoorna-seo' ) ),
+			'redirect_invalid'      => array( 'error', __( 'Enter a source path and (for 301/302/307) a target URL.', 'sampoorna-seo' ) ),
+			'redirects_updated'     => array( 'success', __( 'Redirects updated.', 'sampoorna-seo' ) ),
+			'not_found_updated'     => array( 'success', __( '404 log updated.', 'sampoorna-seo' ) ),
 			'digest_failed'         => array( 'error', __( 'Could not send the digest. Check the recipient address and that the site can send email.', 'sampoorna-seo' ) ),
 			'missing_credentials'   => array( 'error', __( 'Enter your Client ID and Secret first.', 'sampoorna-seo' ) ),
 			'bad_state'             => array( 'error', __( 'Security check failed (state mismatch). Try again.', 'sampoorna-seo' ) ),
@@ -285,6 +383,146 @@ class Screens {
 	}
 
 	/* ---------- Screens ---------- */
+
+	/**
+	 * Renders the Redirects screen (add form + list with bulk actions).
+	 *
+	 * @return void
+	 */
+	public function render_redirects() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only prefill of the source field from a 404-log link.
+		$prefill   = isset( $_GET['source'] ) ? sanitize_text_field( wp_unslash( $_GET['source'] ) ) : '';
+		$redirects = Database::get_redirects( array( 'status' => 'all' ) );
+		?>
+		<div class="wrap">
+			<h1><?php esc_html_e( 'Redirects', 'sampoorna-seo' ); ?></h1>
+			<?php $this->notice(); ?>
+
+			<h2><?php esc_html_e( 'Add redirect', 'sampoorna-seo' ); ?></h2>
+			<form method="post" action="<?php echo $this->action_url( 'sampoorna_seo_add_redirect' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- action_url() returns an esc_url()-escaped string. ?>">
+				<?php wp_nonce_field( 'sampoorna_seo_add_redirect' ); ?>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="sseo-r-source"><?php esc_html_e( 'Source path', 'sampoorna-seo' ); ?></label></th>
+						<td><input name="source" id="sseo-r-source" type="text" class="regular-text" value="<?php echo esc_attr( $prefill ); ?>" placeholder="/old-page/"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="sseo-r-target"><?php esc_html_e( 'Target URL', 'sampoorna-seo' ); ?></label></th>
+						<td><input name="target" id="sseo-r-target" type="text" class="regular-text" placeholder="/new-page/"> <span class="description"><?php esc_html_e( '(not needed for 410 Gone)', 'sampoorna-seo' ); ?></span></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="sseo-r-type"><?php esc_html_e( 'Type', 'sampoorna-seo' ); ?></label></th>
+						<td>
+							<select name="type" id="sseo-r-type">
+								<option value="301"><?php esc_html_e( '301 Moved Permanently', 'sampoorna-seo' ); ?></option>
+								<option value="302"><?php esc_html_e( '302 Found (temporary)', 'sampoorna-seo' ); ?></option>
+								<option value="307"><?php esc_html_e( '307 Temporary Redirect', 'sampoorna-seo' ); ?></option>
+								<option value="410"><?php esc_html_e( '410 Gone', 'sampoorna-seo' ); ?></option>
+							</select>
+							<label style="margin-left:12px;"><input type="checkbox" name="is_regex" value="1"> <?php esc_html_e( 'Source is a regular expression (target may use $1…)', 'sampoorna-seo' ); ?></label>
+						</td>
+					</tr>
+				</table>
+				<?php submit_button( __( 'Add redirect', 'sampoorna-seo' ), 'secondary', '', false ); ?>
+			</form>
+
+			<h2><?php esc_html_e( 'Existing redirects', 'sampoorna-seo' ); ?></h2>
+			<form method="post" action="<?php echo $this->action_url( 'sampoorna_seo_redirect_bulk' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- action_url() returns an esc_url()-escaped string. ?>">
+				<?php wp_nonce_field( 'sampoorna_seo_redirect_bulk' ); ?>
+				<div class="tablenav top">
+					<select name="bulk_action">
+						<option value=""><?php esc_html_e( 'Bulk actions', 'sampoorna-seo' ); ?></option>
+						<option value="enable"><?php esc_html_e( 'Enable', 'sampoorna-seo' ); ?></option>
+						<option value="disable"><?php esc_html_e( 'Disable', 'sampoorna-seo' ); ?></option>
+						<option value="delete"><?php esc_html_e( 'Delete', 'sampoorna-seo' ); ?></option>
+					</select>
+					<button class="button action"><?php esc_html_e( 'Apply', 'sampoorna-seo' ); ?></button>
+				</div>
+				<table class="widefat striped">
+					<thead><tr>
+						<td class="check-column"><input type="checkbox" onclick="jQuery('.sseo-rcb').prop('checked',this.checked);"></td>
+						<th><?php esc_html_e( 'Source', 'sampoorna-seo' ); ?></th>
+						<th><?php esc_html_e( 'Target', 'sampoorna-seo' ); ?></th>
+						<th><?php esc_html_e( 'Type', 'sampoorna-seo' ); ?></th>
+						<th><?php esc_html_e( 'Status', 'sampoorna-seo' ); ?></th>
+						<th><?php esc_html_e( 'Hits', 'sampoorna-seo' ); ?></th>
+					</tr></thead>
+					<tbody>
+					<?php if ( empty( $redirects ) ) : ?>
+						<tr><td colspan="6"><?php esc_html_e( 'No redirects yet.', 'sampoorna-seo' ); ?></td></tr>
+					<?php else : ?>
+						<?php foreach ( $redirects as $r ) : ?>
+							<tr>
+								<th class="check-column"><input class="sseo-rcb" type="checkbox" name="redirect[]" value="<?php echo (int) $r['id']; ?>"></th>
+								<td><code><?php echo esc_html( $r['source'] ); ?></code><?php echo $r['is_regex'] ? ' <span class="description">(regex)</span>' : ''; ?></td>
+								<td><?php echo esc_html( $r['target'] ); ?></td>
+								<td><?php echo esc_html( (string) $r['type'] ); ?></td>
+								<td><?php echo esc_html( $r['status'] ); ?></td>
+								<td><?php echo esc_html( (string) $r['hits'] ); ?></td>
+							</tr>
+						<?php endforeach; ?>
+					<?php endif; ?>
+					</tbody>
+				</table>
+			</form>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Renders the 404 Log screen (list with bulk actions + create-redirect links).
+	 *
+	 * @return void
+	 */
+	public function render_404_log() {
+		$rows = Database::get_not_found( array( 'status' => 'all' ) );
+		?>
+		<div class="wrap">
+			<h1><?php esc_html_e( '404 Log', 'sampoorna-seo' ); ?></h1>
+			<?php $this->notice(); ?>
+			<p class="description"><?php esc_html_e( 'Not-found URLs hit by visitors. Use “Create redirect” to send them somewhere useful.', 'sampoorna-seo' ); ?></p>
+
+			<form method="post" action="<?php echo $this->action_url( 'sampoorna_seo_not_found_bulk' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- action_url() returns an esc_url()-escaped string. ?>">
+				<?php wp_nonce_field( 'sampoorna_seo_not_found_bulk' ); ?>
+				<div class="tablenav top">
+					<select name="bulk_action">
+						<option value=""><?php esc_html_e( 'Bulk actions', 'sampoorna-seo' ); ?></option>
+						<option value="ignore"><?php esc_html_e( 'Ignore', 'sampoorna-seo' ); ?></option>
+						<option value="delete"><?php esc_html_e( 'Delete', 'sampoorna-seo' ); ?></option>
+					</select>
+					<button class="button action"><?php esc_html_e( 'Apply', 'sampoorna-seo' ); ?></button>
+				</div>
+				<table class="widefat striped">
+					<thead><tr>
+						<td class="check-column"><input type="checkbox" onclick="jQuery('.sseo-ncb').prop('checked',this.checked);"></td>
+						<th><?php esc_html_e( 'URL', 'sampoorna-seo' ); ?></th>
+						<th><?php esc_html_e( 'Hits', 'sampoorna-seo' ); ?></th>
+						<th><?php esc_html_e( 'Last seen', 'sampoorna-seo' ); ?></th>
+						<th><?php esc_html_e( 'Status', 'sampoorna-seo' ); ?></th>
+						<th></th>
+					</tr></thead>
+					<tbody>
+					<?php if ( empty( $rows ) ) : ?>
+						<tr><td colspan="6"><?php esc_html_e( 'No 404s logged.', 'sampoorna-seo' ); ?></td></tr>
+					<?php else : ?>
+						<?php foreach ( $rows as $row ) : ?>
+							<?php $add_url = admin_url( 'admin.php?page=sampoorna-seo-redirects&source=' . rawurlencode( $row['url'] ) ); ?>
+							<tr>
+								<th class="check-column"><input class="sseo-ncb" type="checkbox" name="row[]" value="<?php echo (int) $row['id']; ?>"></th>
+								<td><code><?php echo esc_html( $row['url'] ); ?></code></td>
+								<td><?php echo esc_html( (string) $row['hits'] ); ?></td>
+								<td><?php echo esc_html( mysql2date( 'Y-m-d H:i', $row['last_seen'] ) ); ?></td>
+								<td><?php echo esc_html( $row['status'] ); ?></td>
+								<td><a class="button button-small" href="<?php echo esc_url( $add_url ); ?>"><?php esc_html_e( 'Create redirect', 'sampoorna-seo' ); ?></a></td>
+							</tr>
+						<?php endforeach; ?>
+					<?php endif; ?>
+					</tbody>
+				</table>
+			</form>
+		</div>
+		<?php
+	}
 
 	/**
 	 * Renders the Settings screen.
