@@ -17,6 +17,8 @@ use Sampoorna\SEO\Integrations\GSC\Suggestions;
 use Sampoorna\SEO\Integrations\GSC\Reports;
 use Sampoorna\SEO\ControlPlane\Keys;
 use Sampoorna\SEO\Ai\AiClient;
+use Sampoorna\SEO\Technical\Robots;
+use Sampoorna\SEO\Technical\IndexNow;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -146,6 +148,12 @@ class Screens {
 		if ( in_array( $ai_model, AiClient::allowed_models(), true ) ) {
 			update_option( AiClient::OPT_MODEL, $ai_model, false );
 		}
+
+		// Technical SEO: custom robots.txt body + IndexNow toggle.
+		$robots = isset( $_POST['sampoorna_seo_robots_txt'] ) ? sanitize_textarea_field( wp_unslash( $_POST['sampoorna_seo_robots_txt'] ) ) : '';
+		update_option( Robots::OPT_BODY, $robots );
+		update_option( IndexNow::OPT_ENABLED, isset( $_POST['sampoorna_seo_indexnow_enabled'] ) ? 1 : 0 );
+		IndexNow::ensure_key();
 
 		wp_safe_redirect( admin_url( 'admin.php?page=sampoorna-seo-settings&sampoorna_seo_notice=saved' ) );
 		exit;
@@ -611,6 +619,35 @@ class Screens {
 									<option value="<?php echo esc_attr( $model_id ); ?>" <?php selected( AiClient::model(), $model_id ); ?>><?php echo esc_html( $model_id ); ?></option>
 								<?php endforeach; ?>
 							</select>
+						</td>
+					</tr>
+				</table>
+
+				<h2><?php esc_html_e( 'Technical SEO', 'sampoorna-seo' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_robots_txt"><?php esc_html_e( 'robots.txt', 'sampoorna-seo' ); ?></label></th>
+						<td>
+							<textarea name="sampoorna_seo_robots_txt" id="sampoorna_seo_robots_txt" class="large-text code" rows="6"><?php echo esc_textarea( get_option( Robots::OPT_BODY, '' ) ); ?></textarea>
+							<p class="description">
+								<?php esc_html_e( 'Custom robots.txt rules. Leave blank for the WordPress default. The sitemap line is added automatically.', 'sampoorna-seo' ); ?>
+								<a href="<?php echo esc_url( home_url( '/robots.txt' ) ); ?>" target="_blank"><?php esc_html_e( 'View robots.txt', 'sampoorna-seo' ); ?></a>
+							</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'IndexNow', 'sampoorna-seo' ); ?></th>
+						<td>
+							<label>
+								<input name="sampoorna_seo_indexnow_enabled" type="checkbox" value="1" <?php checked( IndexNow::enabled() ); ?>>
+								<?php esc_html_e( 'Auto-submit new and updated URLs to IndexNow (Bing, Yandex, and others).', 'sampoorna-seo' ); ?>
+							</label>
+							<?php if ( '' !== IndexNow::key() ) : ?>
+								<p class="description">
+									<?php esc_html_e( 'Key file:', 'sampoorna-seo' ); ?>
+									<a href="<?php echo esc_url( IndexNow::key_file_url() ); ?>" target="_blank"><code><?php echo esc_html( IndexNow::key() . '.txt' ); ?></code></a>
+								</p>
+							<?php endif; ?>
 						</td>
 					</tr>
 				</table>

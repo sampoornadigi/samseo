@@ -76,9 +76,12 @@ function sampoorna_seo_init() {
 	\Sampoorna\SEO\Meta\MetaStore::instance();
 	\Sampoorna\SEO\Meta\Renderer::instance();
 
-	// Technical SEO (Phase 1): paginated XML sitemaps + redirect manager / 404 monitor.
+	// Technical SEO (Phase 1): sitemaps, redirects/404, robots.txt, hreflang, IndexNow.
 	\Sampoorna\SEO\Technical\Sitemap::instance();
 	\Sampoorna\SEO\Technical\Redirects::instance();
+	\Sampoorna\SEO\Technical\Robots::instance();
+	\Sampoorna\SEO\Technical\Hreflang::instance();
+	\Sampoorna\SEO\Technical\IndexNow::instance();
 
 	\Sampoorna\SEO\Integrations\GSC\OAuth::instance();
 	\Sampoorna\SEO\Integrations\GSC\Sync::instance();
@@ -120,8 +123,10 @@ function sampoorna_seo_activate() {
 	// The 15-min schedule is registered on plugins_loaded; the inspection tick
 	// is scheduled in sampoorna_seo_init once that schedule exists.
 
-	// Register sitemap rewrite rules and flush so pretty URLs resolve immediately.
+	// Register technical-SEO rewrite rules and flush so pretty URLs resolve immediately.
 	\Sampoorna\SEO\Technical\Sitemap::instance()->register_rules();
+	\Sampoorna\SEO\Technical\IndexNow::instance()->register_rules();
+	\Sampoorna\SEO\Technical\IndexNow::ensure_key();
 	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'sampoorna_seo_activate' );
