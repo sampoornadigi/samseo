@@ -192,18 +192,18 @@ class AdminPage {
 						<input type="hidden" name="source" value="<?php echo esc_attr( $slug ); ?>" />
 						<button class="button"><?php esc_html_e( 'Dry run (preview)', 'sampoorna-seo' ); ?></button>
 					</form>
-					<button class="button button-primary" id="sseo-migrate-start" data-source="<?php echo esc_attr( $slug ); ?>" data-total="<?php echo esc_attr( (string) $source->count() ); ?>"><?php esc_html_e( 'Import now', 'sampoorna-seo' ); ?></button>
+					<button class="button button-primary sseo-migrate-start" data-source="<?php echo esc_attr( $slug ); ?>" data-total="<?php echo esc_attr( (string) $source->count() ); ?>"><?php esc_html_e( 'Import now', 'sampoorna-seo' ); ?></button>
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php?action=sampoorna_seo_migrate_verify' ) ); ?>" style="display:inline;">
 						<?php wp_nonce_field( self::NONCE ); ?>
 						<input type="hidden" name="source" value="<?php echo esc_attr( $slug ); ?>" />
 						<button class="button"><?php esc_html_e( 'Verify', 'sampoorna-seo' ); ?></button>
 					</form>
 				</p>
-				<div id="sseo-migrate-progress" style="display:none;margin:10px 0;max-width:480px;">
+				<div class="sseo-migrate-progress" data-slug="<?php echo esc_attr( $slug ); ?>" style="display:none;margin:10px 0;max-width:480px;">
 					<div style="height:14px;background:#dcdcde;border-radius:7px;overflow:hidden;">
-						<div id="sseo-migrate-bar" style="height:100%;width:0;background:#2271b1;transition:width .2s;"></div>
+						<div class="sseo-migrate-bar" style="height:100%;width:0;background:#2271b1;transition:width .2s;"></div>
 					</div>
-					<p id="sseo-migrate-status" class="description"></p>
+					<p class="sseo-migrate-status description"></p>
 				</div>
 			<?php endforeach; ?>
 

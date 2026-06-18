@@ -26,6 +26,8 @@ class Registry {
 	public static function sources() {
 		return array(
 			new YoastSource(),
+			new RankMathSource(),
+			new AioseoSource(),
 		);
 	}
 
