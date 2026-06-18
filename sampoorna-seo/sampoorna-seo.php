@@ -101,6 +101,7 @@ function sampoorna_seo_init() {
 	if ( is_admin() ) {
 		\Sampoorna\SEO\Admin\Screens::instance();
 		\Sampoorna\SEO\Admin\MetaBox::instance();
+		\Sampoorna\SEO\Migration\AdminPage::instance();
 	}
 	// Ensure the inspection tick is scheduled (covers upgrades from earlier versions).
 	if ( ! wp_next_scheduled( SAMPOORNA_SEO_INSPECT_HOOK ) ) {
