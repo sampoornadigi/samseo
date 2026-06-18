@@ -1,0 +1,65 @@
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+    <h2 style="margin:0;font-size:15px;"><%= site.label || site.site_url || site.key_id %></h2>
+    <a class="btn" href="/">&larr; All sites</a>
+  </div>
+  <p class="muted" style="margin-top:0;"><%= site.site_url || site.reach_url %> &middot; <code><%= site.key_id %></code></p>
+
+  <% if (!latest) { %>
+    <p class="muted">No health snapshot yet. Use <strong>Refresh</strong> on the sites list to pull metrics from this site.</p>
+  <% } else {
+       var dims = [
+         ['Content', latest.scores.content],
+         ['Authority', latest.scores.authority],
+         ['Technical', latest.scores.technical],
+         ['UX', latest.scores.ux],
+         ['GEO / AEO', latest.scores.geo]
+       ];
+       function band(v) { return v == null ? null : (v >= 80 ? 'good' : (v >= 50 ? 'ok' : 'bad')); }
+       var ob = band(latest.overall);
+  %>
+    <div style="display:flex;align-items:center;gap:14px;margin:10px 0 18px;">
+      <% if (ob) { %>
+        <span class="pill pill--<%= ob %>" style="font-size:20px;padding:8px 16px;"><%= latest.overall %></span>
+      <% } else { %><span class="muted">—</span><% } %>
+      <div>
+        <div style="font-weight:600;">Overall health</div>
+        <div class="muted">Captured <%= new Date(latest.captured_at).toLocaleString() %> &middot; <%= count %> snapshot(s)</div>
+      </div>
+    </div>
+
+    <table>
+      <tbody>
+        <% dims.forEach(function (d) {
+             var name = d[0]; var v = d[1]; var b = band(v);
+             var colors = { good:'#1a7f37', ok:'#bf8700', bad:'#b42318' };
+        %>
+        <tr>
+          <th style="width:120px;"><%= name %></th>
+          <td>
+            <% if (v == null) { %>
+              <span class="muted">Not enough data</span>
+            <% } else { %>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="flex:1;max-width:340px;height:10px;background:#eee;border-radius:6px;overflow:hidden;">
+                  <div style="height:100%;width:<%= v %>%;background:<%= colors[b] %>;"></div>
+                </div>
+                <strong style="width:34px;text-align:right;"><%= v %></strong>
+              </div>
+            <% } %>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+
+    <details style="margin-top:18px;">
+      <summary style="cursor:pointer;font-weight:600;">Raw signals</summary>
+      <pre style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:6px;padding:12px;overflow:auto;font-size:12px;"><%= JSON.stringify(latest.signals, null, 2) %></pre>
+    </details>
+  <% } %>
+
+  <form class="inline" method="post" action="/sites/<%= site.id %>/refresh" style="margin-top:16px;">
+    <button class="btn btn--primary" type="submit">Refresh now</button>
+  </form>
+</div>

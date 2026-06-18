@@ -5,7 +5,9 @@
 
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { applyDescriptor, enroll, getById, list, secretFor } from '../repo/sites.js';
-import { pullStatus } from '../client/siteClient.js';
+import { pullMetrics, pullStatus } from '../client/siteClient.js';
+import { score } from '../score/scorer.js';
+import { insertSnapshot, latestForSite, latestOverallBySite, snapshotCount } from '../repo/metrics.js';
 
 interface EnrollForm {
   label?: string;
@@ -17,7 +19,24 @@ interface EnrollForm {
 export function registerDashboard(app: FastifyInstance): void {
   app.get('/', async (_request, reply) => {
     const sites = await list();
-    return reply.view('sites.ejs', { title: 'Sites', sites, now: Date.now() });
+    const health = await latestOverallBySite();
+    const healthBySite: Record<number, number | null> = {};
+    for (const s of sites) {
+      const h = health.get(s.id);
+      healthBySite[s.id] = h ? h.overall : null;
+    }
+    return reply.view('sites.ejs', { title: 'Sites', sites, health: healthBySite, now: Date.now() });
+  });
+
+  app.get('/sites/:id', async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
+    const id = Number(request.params.id);
+    const site = Number.isFinite(id) ? await getById(id) : null;
+    if (!site) {
+      return reply.code(404).send({ error: 'site not found' });
+    }
+    const latest = await latestForSite(id);
+    const count = await snapshotCount(id);
+    return reply.view('site-detail.ejs', { title: site.label || site.site_url, site, latest, count });
   });
 
   app.get('/sites/new', async (_request, reply) => {
@@ -62,9 +81,15 @@ export function registerDashboard(app: FastifyInstance): void {
       return reply.code(404).send({ error: 'site secret missing' });
     }
 
-    const result = await pullStatus(site, secret);
-    if (result.ok && result.descriptor) {
-      await applyDescriptor(site.key_id, result.descriptor);
+    const status = await pullStatus(site, secret);
+    if (status.ok && status.descriptor) {
+      await applyDescriptor(site.key_id, status.descriptor);
+    }
+
+    const metrics = await pullMetrics(site, secret);
+    if (metrics.ok && metrics.signals) {
+      const scores = score(metrics.signals);
+      await insertSnapshot(site.id, metrics.signals, scores);
     }
     // Re-render the list regardless; failures simply leave stale data in place.
     return reply.redirect('/');

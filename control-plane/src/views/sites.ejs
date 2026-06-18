@@ -10,7 +10,7 @@
     <table>
       <thead>
         <tr>
-          <th>Site</th><th>Status</th><th>Plugin</th><th>WP</th><th>GSC</th><th>Last seen</th><th></th>
+          <th>Site</th><th>Health</th><th>Status</th><th>Plugin</th><th>WP</th><th>GSC</th><th>Last seen</th><th></th>
         </tr>
       </thead>
       <tbody>
@@ -21,11 +21,16 @@
              var label = state === 'good' ? 'online' : (state === 'bad' ? 'never' : 'stale');
              var gsc = s.modules && s.modules.gsc_connected;
         %>
+        <% var overall = health[s.id];
+           var hb = overall == null ? null : (overall >= 80 ? 'good' : (overall >= 50 ? 'ok' : 'bad')); %>
         <tr>
           <td>
-            <strong><%= s.label || s.site_url || s.key_id %></strong><br>
+            <strong><a href="/sites/<%= s.id %>"><%= s.label || s.site_url || s.key_id %></a></strong><br>
             <span class="muted"><%= s.site_url || s.reach_url %></span><br>
             <span class="muted"><code><%= s.key_id %></code></span>
+          </td>
+          <td>
+            <% if (hb) { %><span class="pill pill--<%= hb %>"><%= overall %></span><% } else { %><span class="muted">—</span><% } %>
           </td>
           <td><span class="pill pill--<%= state %>"><%= label %></span></td>
           <td><%= s.plugin_version || '—' %></td>

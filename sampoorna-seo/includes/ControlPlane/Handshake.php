@@ -78,6 +78,15 @@ class Handshake {
 				'permission_callback' => array( $this, 'verify_request' ),
 			)
 		);
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/metrics',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'handle_metrics' ),
+				'permission_callback' => array( $this, 'verify_request' ),
+			)
+		);
 	}
 
 	/**
@@ -140,6 +149,17 @@ class Handshake {
 		$plane_id          = $request->get_param( 'plane_id' );
 		$data['plane_id']  = is_string( $plane_id ) ? sanitize_text_field( $plane_id ) : '';
 		return new \WP_REST_Response( $data, 200 );
+	}
+
+	/**
+	 * GET /metrics — return the raw site health signals for plane-side scoring.
+	 *
+	 * @param \WP_REST_Request $request Incoming request.
+	 * @return \WP_REST_Response
+	 */
+	public function handle_metrics( $request ) {
+		unset( $request );
+		return new \WP_REST_Response( Metrics::collect(), 200 );
 	}
 
 	/**
