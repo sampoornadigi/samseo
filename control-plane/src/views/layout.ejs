@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= title %> · Sampoorna Control Plane</title>
+  <style>
+    :root { --ink:#1d2327; --muted:#646970; --line:#dcdcde; --good:#1a7f37; --bad:#b42318; --bg:#f6f7f7; }
+    * { box-sizing: border-box; }
+    body { margin:0; font:14px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:var(--bg); }
+    header { background:#1d2327; color:#fff; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; }
+    header h1 { font-size:16px; margin:0; font-weight:600; }
+    header a { color:#9ec5fe; text-decoration:none; }
+    main { max-width:1000px; margin:24px auto; padding:0 24px; }
+    .card { background:#fff; border:1px solid var(--line); border-radius:8px; padding:18px 20px; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+    th { font-size:12px; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); }
+    .pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:600; color:#fff; }
+    .pill--good { background:var(--good); } .pill--bad { background:var(--bad); } .pill--stale { background:#bf8700; }
+    .btn { display:inline-block; padding:6px 12px; border-radius:5px; border:1px solid var(--line); background:#fff; color:var(--ink); text-decoration:none; cursor:pointer; font:inherit; }
+    .btn--primary { background:#2271b1; border-color:#2271b1; color:#fff; }
+    .muted { color:var(--muted); }
+    .err { background:#fcf0ef; border:1px solid var(--bad); color:var(--bad); padding:10px 12px; border-radius:6px; margin-bottom:14px; }
+    form.inline { display:inline; }
+    label { display:block; font-weight:600; margin:12px 0 4px; }
+    input[type=text] { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:5px; font:inherit; }
+    code { background:#f0f0f1; padding:1px 5px; border-radius:3px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Sampoorna · Control Plane</h1>
+    <nav><a href="/">Sites</a></nav>
+  </header>
+  <main><%- body %></main>
+</body>
+</html>

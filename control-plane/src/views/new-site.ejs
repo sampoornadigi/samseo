@@ -1,0 +1,28 @@
+<div class="card" style="max-width:560px;">
+  <h2 style="margin:0 0 6px;font-size:15px;">Enroll a site</h2>
+  <p class="muted" style="margin-top:0;">
+    In the site’s WordPress admin → Sampoorna SEO → Settings → “Control plane”, copy the
+    <strong>Key id</strong> and <strong>Shared secret</strong> and paste them here.
+  </p>
+
+  <% if (error) { %><div class="err"><%= error %></div><% } %>
+
+  <form method="post" action="/sites">
+    <label for="label">Label</label>
+    <input type="text" id="label" name="label" placeholder="Anu Furniture — main site">
+
+    <label for="reach_url">Reachable URL</label>
+    <input type="text" id="reach_url" name="reach_url" placeholder="https://client.example.com (dev: http://wordpress)">
+
+    <label for="key_id">Key id</label>
+    <input type="text" id="key_id" name="key_id" placeholder="k_xxxxxxxxxxxx">
+
+    <label for="secret">Shared secret</label>
+    <input type="text" id="secret" name="secret" placeholder="64 hex characters">
+
+    <p style="margin-top:18px;">
+      <button class="btn btn--primary" type="submit">Enroll</button>
+      <a class="btn" href="/">Cancel</a>
+    </p>
+  </form>
+</div>

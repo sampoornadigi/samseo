@@ -16,6 +16,7 @@ use Sampoorna\SEO\Integrations\GSC\Inspector;
 use Sampoorna\SEO\Integrations\GSC\Suggestions;
 use Sampoorna\SEO\Integrations\GSC\Reports;
 use Sampoorna\SEO\ControlPlane\Keys;
+use Sampoorna\SEO\ControlPlane\Handshake;
 use Sampoorna\SEO\Ai\AiClient;
 use Sampoorna\SEO\Technical\Robots;
 use Sampoorna\SEO\Technical\IndexNow;
@@ -60,6 +61,7 @@ class Screens {
 		add_action( 'admin_post_sampoorna_seo_issue_bulk', array( $this, 'issue_bulk' ) );
 		add_action( 'admin_post_sampoorna_seo_save_control_plane', array( $this, 'save_control_plane' ) );
 		add_action( 'admin_post_sampoorna_seo_rotate_key', array( $this, 'rotate_key' ) );
+		add_action( 'admin_post_sampoorna_seo_announce', array( $this, 'announce_now' ) );
 		add_action( 'admin_post_sampoorna_seo_add_redirect', array( $this, 'add_redirect' ) );
 		add_action( 'admin_post_sampoorna_seo_redirect_bulk', array( $this, 'redirect_bulk' ) );
 		add_action( 'admin_post_sampoorna_seo_not_found_bulk', array( $this, 'not_found_bulk' ) );
@@ -265,6 +267,28 @@ class Screens {
 	}
 
 	/**
+	 * Announces this site to the control plane (signed site->plane handshake).
+	 *
+	 * @return void
+	 */
+	public function announce_now() {
+		if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'sampoorna_seo_announce' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'sampoorna-seo' ) );
+		}
+		$result = Handshake::instance()->announce();
+		if ( null === $result ) {
+			$notice = 'cp_announce_unconfigured';
+		} elseif ( is_wp_error( $result ) ) {
+			$notice = 'cp_announce_failed';
+		} else {
+			$code   = (int) wp_remote_retrieve_response_code( $result );
+			$notice = ( $code >= 200 && $code < 300 ) ? 'cp_announced' : 'cp_announce_failed';
+		}
+		wp_safe_redirect( admin_url( 'admin.php?page=sampoorna-seo-settings&sampoorna_seo_notice=' . $notice ) );
+		exit;
+	}
+
+	/**
 	 * Allowed redirect status codes.
 	 *
 	 * @return int[]
@@ -367,30 +391,33 @@ class Screens {
 			return;
 		}
 		$map = array(
-			'connected'             => array( 'success', __( 'Connected to Google Search Console.', 'sampoorna-seo' ) ),
-			'disconnected'          => array( 'success', __( 'Disconnected. Stored tokens removed.', 'sampoorna-seo' ) ),
-			'saved'                 => array( 'success', __( 'Settings saved.', 'sampoorna-seo' ) ),
-			'property_saved'        => array( 'success', __( 'Property selected.', 'sampoorna-seo' ) ),
-			'synced'                => array( 'success', __( 'Performance data synced.', 'sampoorna-seo' ) ),
-			'seeded'                => array( 'success', __( 'Queue populated. Inspection runs in the background under Google\'s daily limit.', 'sampoorna-seo' ) ),
-			'inspected'             => array( 'success', __( 'Processed a batch of URL inspections.', 'sampoorna-seo' ) ),
-			'issues_updated'        => array( 'success', __( 'Issues updated.', 'sampoorna-seo' ) ),
-			'suggestions_generated' => array( 'success', __( 'Suggestions generated.', 'sampoorna-seo' ) ),
-			'suggestions_updated'   => array( 'success', __( 'Suggestions updated.', 'sampoorna-seo' ) ),
-			'digest_sent'           => array( 'success', __( 'Test digest sent.', 'sampoorna-seo' ) ),
-			'cp_saved'              => array( 'success', __( 'Control-plane URL saved.', 'sampoorna-seo' ) ),
-			'key_rotated'           => array( 'success', __( 'A new site key was generated. Re-register its key ID with the control plane.', 'sampoorna-seo' ) ),
-			'redirect_added'        => array( 'success', __( 'Redirect added.', 'sampoorna-seo' ) ),
-			'redirect_invalid'      => array( 'error', __( 'Enter a source path and (for 301/302/307) a target URL.', 'sampoorna-seo' ) ),
-			'redirects_updated'     => array( 'success', __( 'Redirects updated.', 'sampoorna-seo' ) ),
-			'not_found_updated'     => array( 'success', __( '404 log updated.', 'sampoorna-seo' ) ),
-			'digest_failed'         => array( 'error', __( 'Could not send the digest. Check the recipient address and that the site can send email.', 'sampoorna-seo' ) ),
-			'missing_credentials'   => array( 'error', __( 'Enter your Client ID and Secret first.', 'sampoorna-seo' ) ),
-			'bad_state'             => array( 'error', __( 'Security check failed (state mismatch). Try again.', 'sampoorna-seo' ) ),
-			'denied'                => array( 'error', __( 'Authorization was denied.', 'sampoorna-seo' ) ),
-			'no_code'               => array( 'error', __( 'No authorization code returned by Google.', 'sampoorna-seo' ) ),
-			'token_error'           => array( 'error', __( 'Failed to exchange the authorization code. Check the redirect URI matches Google Cloud exactly.', 'sampoorna-seo' ) ),
-			'sync_error'            => array( 'error', __( 'Sync failed. See the log on the dashboard.', 'sampoorna-seo' ) ),
+			'connected'                => array( 'success', __( 'Connected to Google Search Console.', 'sampoorna-seo' ) ),
+			'disconnected'             => array( 'success', __( 'Disconnected. Stored tokens removed.', 'sampoorna-seo' ) ),
+			'saved'                    => array( 'success', __( 'Settings saved.', 'sampoorna-seo' ) ),
+			'property_saved'           => array( 'success', __( 'Property selected.', 'sampoorna-seo' ) ),
+			'synced'                   => array( 'success', __( 'Performance data synced.', 'sampoorna-seo' ) ),
+			'seeded'                   => array( 'success', __( 'Queue populated. Inspection runs in the background under Google\'s daily limit.', 'sampoorna-seo' ) ),
+			'inspected'                => array( 'success', __( 'Processed a batch of URL inspections.', 'sampoorna-seo' ) ),
+			'issues_updated'           => array( 'success', __( 'Issues updated.', 'sampoorna-seo' ) ),
+			'suggestions_generated'    => array( 'success', __( 'Suggestions generated.', 'sampoorna-seo' ) ),
+			'suggestions_updated'      => array( 'success', __( 'Suggestions updated.', 'sampoorna-seo' ) ),
+			'digest_sent'              => array( 'success', __( 'Test digest sent.', 'sampoorna-seo' ) ),
+			'cp_saved'                 => array( 'success', __( 'Control-plane URL saved.', 'sampoorna-seo' ) ),
+			'key_rotated'              => array( 'success', __( 'A new site key was generated. Re-register its key ID with the control plane.', 'sampoorna-seo' ) ),
+			'cp_announced'             => array( 'success', __( 'Announced this site to the control plane.', 'sampoorna-seo' ) ),
+			'cp_announce_failed'       => array( 'error', __( 'Announcement failed. Check the control-plane URL and that the site is enrolled.', 'sampoorna-seo' ) ),
+			'cp_announce_unconfigured' => array( 'error', __( 'Set a control-plane URL and generate a key before announcing.', 'sampoorna-seo' ) ),
+			'redirect_added'           => array( 'success', __( 'Redirect added.', 'sampoorna-seo' ) ),
+			'redirect_invalid'         => array( 'error', __( 'Enter a source path and (for 301/302/307) a target URL.', 'sampoorna-seo' ) ),
+			'redirects_updated'        => array( 'success', __( 'Redirects updated.', 'sampoorna-seo' ) ),
+			'not_found_updated'        => array( 'success', __( '404 log updated.', 'sampoorna-seo' ) ),
+			'digest_failed'            => array( 'error', __( 'Could not send the digest. Check the recipient address and that the site can send email.', 'sampoorna-seo' ) ),
+			'missing_credentials'      => array( 'error', __( 'Enter your Client ID and Secret first.', 'sampoorna-seo' ) ),
+			'bad_state'                => array( 'error', __( 'Security check failed (state mismatch). Try again.', 'sampoorna-seo' ) ),
+			'denied'                   => array( 'error', __( 'Authorization was denied.', 'sampoorna-seo' ) ),
+			'no_code'                  => array( 'error', __( 'No authorization code returned by Google.', 'sampoorna-seo' ) ),
+			'token_error'              => array( 'error', __( 'Failed to exchange the authorization code. Check the redirect URI matches Google Cloud exactly.', 'sampoorna-seo' ) ),
+			'sync_error'               => array( 'error', __( 'Sync failed. See the log on the dashboard.', 'sampoorna-seo' ) ),
 		);
 		if ( ! isset( $map[ $key ] ) ) {
 			return;
@@ -840,6 +867,20 @@ class Screens {
 						<?php endif; ?>
 					</td>
 				</tr>
+				<?php if ( Keys::is_configured() ) : ?>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Shared secret', 'sampoorna-seo' ); ?></th>
+						<td>
+							<details>
+								<summary style="cursor:pointer;"><?php esc_html_e( 'Reveal secret for enrollment', 'sampoorna-seo' ); ?></summary>
+								<p>
+									<input type="text" class="large-text code" readonly value="<?php echo esc_attr( Keys::secret() ); ?>" onfocus="this.select();" />
+								</p>
+								<p class="description"><?php esc_html_e( 'Paste this secret and the key ID above into the control plane to enroll this site. Treat it like a password — anyone with it can authenticate as this site.', 'sampoorna-seo' ); ?></p>
+							</details>
+						</td>
+					</tr>
+				<?php endif; ?>
 				<tr>
 					<th scope="row"><label for="sampoorna_seo_cp_url"><?php esc_html_e( 'Control-plane URL', 'sampoorna-seo' ); ?></label></th>
 					<td>
@@ -857,6 +898,16 @@ class Screens {
 							<?php wp_nonce_field( 'sampoorna_seo_rotate_key' ); ?>
 							<button class="button button-secondary"><?php esc_html_e( 'Generate a new site key', 'sampoorna-seo' ); ?></button>
 							<span class="description"><?php esc_html_e( 'Invalidates the current key.', 'sampoorna-seo' ); ?></span>
+						</form>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Announce', 'sampoorna-seo' ); ?></th>
+					<td>
+						<form method="post" action="<?php echo $this->action_url( 'sampoorna_seo_announce' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- action_url() returns an esc_url()-escaped string. ?>">
+							<?php wp_nonce_field( 'sampoorna_seo_announce' ); ?>
+							<button class="button button-secondary" <?php disabled( '' === Keys::plane_url() || ! Keys::is_configured() ); ?>><?php esc_html_e( 'Announce this site now', 'sampoorna-seo' ); ?></button>
+							<span class="description"><?php esc_html_e( 'Sends a signed descriptor to the control-plane URL.', 'sampoorna-seo' ); ?></span>
 						</form>
 					</td>
 				</tr>

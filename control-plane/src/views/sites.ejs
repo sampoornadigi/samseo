@@ -1,0 +1,45 @@
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <h2 style="margin:0;font-size:15px;">Enrolled sites (<%= sites.length %>)</h2>
+    <a class="btn btn--primary" href="/sites/new">Enroll a site</a>
+  </div>
+
+  <% if (sites.length === 0) { %>
+    <p class="muted">No sites yet. Enroll one by pasting its key id and secret from the WordPress “Control plane” settings.</p>
+  <% } else { %>
+    <table>
+      <thead>
+        <tr>
+          <th>Site</th><th>Status</th><th>Plugin</th><th>WP</th><th>GSC</th><th>Last seen</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% sites.forEach(function (s) {
+             var seen = s.last_seen ? new Date(s.last_seen).getTime() : 0;
+             var ageMin = seen ? Math.floor((now - seen) / 60000) : null;
+             var state = seen === 0 ? 'bad' : (ageMin <= 15 ? 'good' : 'stale');
+             var label = state === 'good' ? 'online' : (state === 'bad' ? 'never' : 'stale');
+             var gsc = s.modules && s.modules.gsc_connected;
+        %>
+        <tr>
+          <td>
+            <strong><%= s.label || s.site_url || s.key_id %></strong><br>
+            <span class="muted"><%= s.site_url || s.reach_url %></span><br>
+            <span class="muted"><code><%= s.key_id %></code></span>
+          </td>
+          <td><span class="pill pill--<%= state %>"><%= label %></span></td>
+          <td><%= s.plugin_version || '—' %></td>
+          <td><%= s.wp_version || '—' %></td>
+          <td><%= gsc ? 'yes' : 'no' %></td>
+          <td><%= s.last_seen ? new Date(s.last_seen).toLocaleString() : '—' %></td>
+          <td>
+            <form class="inline" method="post" action="/sites/<%= s.id %>/refresh">
+              <button class="btn" type="submit">Refresh</button>
+            </form>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>

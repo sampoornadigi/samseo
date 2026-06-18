@@ -98,6 +98,46 @@ services:
       - .:/workspace
     command: ["tail", "-f", "/dev/null"]
 
+  # Control plane database (Phase 4).
+  cp_db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${CP_DB_USER:-cp}
+      POSTGRES_PASSWORD: ${CP_DB_PASSWORD:-cp}
+      POSTGRES_DB: ${CP_DB_NAME:-control_plane}
+    volumes:
+      - cp_db_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"   # host 5433 -> container 5432 (avoids a local Postgres clash)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CP_DB_USER:-cp}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Control plane: Node + Fastify dashboard over the signed handshake (Phase 4).
+  cp:
+    build:
+      context: ./control-plane
+      dockerfile: Dockerfile
+    depends_on:
+      cp_db:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgres://${CP_DB_USER:-cp}:${CP_DB_PASSWORD:-cp}@cp_db:5432/${CP_DB_NAME:-control_plane}
+      # Dev AES-256-GCM key (32 bytes hex). Override in production.
+      CP_VAULT_KEY: ${CP_VAULT_KEY:-1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100}
+      SKEW_SECONDS: 300
+    ports:
+      - "8090:3000"
+    volumes:
+      - ./control-plane:/app
+      - cp_node_modules:/app/node_modules   # keep installed deps from the bind mount
+    command: ["sh", "-c", "npm install --no-audit --no-fund && npm run migrate && npm run dev"]
+
 volumes:
   db_data: {}
   wp_data: {}
+  cp_db_data: {}
+  cp_node_modules: {}
