@@ -24,12 +24,25 @@ export interface CitationResult {
   snippet: string;
 }
 
-/** Whether an answer cites the site (by domain or brand), plus a snippet. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Whether an answer cites the site, plus a snippet.
+ *
+ * Domain is matched as a substring (domains are specific); brand is matched on
+ * word boundaries so a generic brand (e.g. "Anu") doesn't false-positive inside
+ * another word (e.g. "manual").
+ */
 export function detectCitation(answer: string, ctx: CitationContext): { cited: boolean; snippet: string } {
   const a = answer.toLowerCase();
   const domain = ctx.domain.trim().toLowerCase();
   const brand = ctx.brand.trim().toLowerCase();
-  const cited = (domain.length > 0 && a.includes(domain)) || (brand.length >= 3 && a.includes(brand));
+  let cited = domain.length > 0 && a.includes(domain);
+  if (!cited && brand.length >= 3) {
+    cited = new RegExp(`\\b${escapeRegExp(brand)}\\b`).test(a);
+  }
   return { cited, snippet: answer.trim().slice(0, 200) };
 }
 

@@ -195,7 +195,11 @@ export function registerDashboard(app: FastifyInstance): void {
         return reply.code(404).send({ error: 'site not found' });
       }
       const res = await rollback(site, secret, dep.deploy_id);
-      if (res.ok) {
+      // Only flip to rolled_back when the site actually reverted something; if
+      // every change was skipped (e.g. edited since deploy) the values are still
+      // live, so the deployment stays "deployed".
+      const restored = ((res.data as { restored?: number } | undefined)?.restored) ?? 0;
+      if (res.ok && restored > 0) {
         await setRolledBack(dep.deploy_id, res.data);
       }
       return reply.redirect(`/sites/${site.id}`);

@@ -25,6 +25,12 @@ describe('detectCitation', () => {
     expect(r.cited).toBe(false);
   });
 
+  it('matches the brand on word boundaries, not inside other words', () => {
+    // "Anu" must not match inside "manual".
+    expect(detectCitation('Follow the manual process.', { domain: '', brand: 'Anu' }).cited).toBe(false);
+    expect(detectCitation('Anu Furniture is great.', { domain: '', brand: 'Anu' }).cited).toBe(true);
+  });
+
   it('truncates the snippet', () => {
     const long = 'x'.repeat(500);
     expect(detectCitation(long, ctx).snippet.length).toBe(200);

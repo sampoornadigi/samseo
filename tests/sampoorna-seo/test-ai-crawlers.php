@@ -57,6 +57,30 @@ class Sampoorna_Seo_Ai_Crawlers_Test extends WP_UnitTestCase {
 		$this->assertTrue( AiAccess::evaluate( $robots, 'CCBot' )['allowed'] );
 	}
 
+	public function test_wildcard_disallow_blocks_root() {
+		$robots = "User-agent: *\nDisallow: /*\n";
+		$this->assertFalse( AiAccess::evaluate( $robots, 'GPTBot' )['allowed'] );
+	}
+
+	public function test_path_specific_disallow_does_not_block_root() {
+		$robots = "User-agent: *\nDisallow: /private/\n";
+		$this->assertTrue( AiAccess::evaluate( $robots, 'GPTBot' )['allowed'] );
+		// …but it does block the matching subtree.
+		$this->assertFalse( AiAccess::evaluate( $robots, 'GPTBot', '/private/x' )['allowed'] );
+	}
+
+	public function test_wildcard_pattern_matches_mid_path() {
+		$robots = "User-agent: *\nDisallow: /*.pdf$\n";
+		$this->assertFalse( AiAccess::evaluate( $robots, 'GPTBot', '/docs/report.pdf' )['allowed'] );
+		$this->assertTrue( AiAccess::evaluate( $robots, 'GPTBot', '/docs/report.html' )['allowed'] );
+	}
+
+	public function test_longest_match_allow_overrides_disallow() {
+		$robots = "User-agent: *\nDisallow: /blog/\nAllow: /blog/public/\n";
+		$this->assertTrue( AiAccess::evaluate( $robots, 'GPTBot', '/blog/public/post' )['allowed'] );
+		$this->assertFalse( AiAccess::evaluate( $robots, 'GPTBot', '/blog/private' )['allowed'] );
+	}
+
 	public function test_report_covers_all_bots() {
 		$report = AiAccess::report();
 		$this->assertCount( count( AiBots::all() ), $report );

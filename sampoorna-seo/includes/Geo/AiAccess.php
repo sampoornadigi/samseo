@@ -61,13 +61,18 @@ class AiAccess {
 	}
 
 	/**
-	 * Evaluate whether a bot may crawl "/" given a robots.txt body.
+	 * Evaluate whether a bot may crawl a path given a robots.txt body.
+	 *
+	 * Supports `*` (any run of characters) and a trailing `$` (end anchor) in
+	 * rule paths, and resolves Allow/Disallow by longest-matching rule (ties
+	 * favour Allow), per Google's robots matching.
 	 *
 	 * @param string $robots    Robots.txt body.
 	 * @param string $bot_token The bot's user-agent token.
+	 * @param string $path      Path to test (defaults to the site root).
 	 * @return array{allowed:bool,via:string} via = the group token that decided.
 	 */
-	public static function evaluate( $robots, $bot_token ) {
+	public static function evaluate( $robots, $bot_token, $path = '/' ) {
 		$groups = self::parse( $robots );
 		$token  = strtolower( (string) $bot_token );
 
@@ -97,17 +102,15 @@ class AiAccess {
 			}
 		}
 
-		// Decide "/" by longest matching path; tie favours Allow.
+		// Decide by longest matching rule path; tie favours Allow. An empty
+		// Disallow/Allow path imposes no restriction (skipped by path_matches).
 		$best_len   = -1;
 		$best_allow = true;
 		foreach ( $chosen as $rule ) {
-			$path = $rule['path'];
-			// A rule applies to "/" only when its path is a non-empty prefix of "/"
-			// (i.e. "/"). An empty Disallow/Allow path imposes no restriction.
-			if ( '' === $path || 0 !== strpos( '/', $path ) ) {
+			if ( ! self::path_matches( $rule['path'], $path ) ) {
 				continue;
 			}
-			$len = strlen( $path );
+			$len = strlen( $rule['path'] );
 			if ( $len > $best_len || ( $len === $best_len && $rule['allow'] ) ) {
 				$best_len   = $len;
 				$best_allow = $rule['allow'];
@@ -118,6 +121,30 @@ class AiAccess {
 			'allowed' => $best_allow,
 			'via'     => isset( $via ) ? $via : '*',
 		);
+	}
+
+	/**
+	 * Whether a robots rule path pattern matches a URL path.
+	 *
+	 * Honours `*` (any characters) and a trailing `$` (end-of-path anchor).
+	 * An empty pattern matches nothing (an empty Disallow is "allow all").
+	 *
+	 * @param string $pattern Rule path (may contain `*` / trailing `$`).
+	 * @param string $path    URL path to test.
+	 * @return bool
+	 */
+	private static function path_matches( $pattern, $path ) {
+		if ( '' === $pattern ) {
+			return false;
+		}
+		$anchor_end = false;
+		if ( '$' === substr( $pattern, -1 ) ) {
+			$anchor_end = true;
+			$pattern    = substr( $pattern, 0, -1 );
+		}
+		$regex = str_replace( '\*', '.*', preg_quote( $pattern, '#' ) );
+		$regex = '#^' . $regex . ( $anchor_end ? '$' : '' ) . '#';
+		return 1 === preg_match( $regex, $path );
 	}
 
 	/**
