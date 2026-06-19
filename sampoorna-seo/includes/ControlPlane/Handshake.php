@@ -87,6 +87,33 @@ class Handshake {
 				'permission_callback' => array( $this, 'verify_request' ),
 			)
 		);
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/audit',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'handle_audit' ),
+				'permission_callback' => array( $this, 'verify_request' ),
+			)
+		);
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/apply',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'handle_apply' ),
+				'permission_callback' => array( $this, 'verify_request' ),
+			)
+		);
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/rollback',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'handle_rollback' ),
+				'permission_callback' => array( $this, 'verify_request' ),
+			)
+		);
 	}
 
 	/**
@@ -160,6 +187,41 @@ class Handshake {
 	public function handle_metrics( $request ) {
 		unset( $request );
 		return new \WP_REST_Response( Metrics::collect(), 200 );
+	}
+
+	/**
+	 * GET /audit — return deterministic, deployable SEO findings.
+	 *
+	 * @param \WP_REST_Request $request Incoming request.
+	 * @return \WP_REST_Response
+	 */
+	public function handle_audit( $request ) {
+		unset( $request );
+		return new \WP_REST_Response( array( 'findings' => Audit::findings() ), 200 );
+	}
+
+	/**
+	 * POST /apply — apply a reversible changeset.
+	 *
+	 * @param \WP_REST_Request $request Incoming request.
+	 * @return \WP_REST_Response
+	 */
+	public function handle_apply( $request ) {
+		$deploy_id = (string) $request->get_param( 'deploy_id' );
+		$changes   = $request->get_param( 'changes' );
+		$changes   = is_array( $changes ) ? $changes : array();
+		return new \WP_REST_Response( Deploy::apply( $deploy_id, $changes ), 200 );
+	}
+
+	/**
+	 * POST /rollback — revert a deployment to its prior state.
+	 *
+	 * @param \WP_REST_Request $request Incoming request.
+	 * @return \WP_REST_Response
+	 */
+	public function handle_rollback( $request ) {
+		$deploy_id = (string) $request->get_param( 'deploy_id' );
+		return new \WP_REST_Response( Deploy::rollback( $deploy_id ), 200 );
 	}
 
 	/**

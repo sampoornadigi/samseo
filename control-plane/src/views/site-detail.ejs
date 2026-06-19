@@ -63,3 +63,68 @@
     <button class="btn btn--primary" type="submit">Refresh now</button>
   </form>
 </div>
+
+<div class="card" style="margin-top:18px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+    <h2 style="margin:0;font-size:15px;">Audit &rarr; deploy</h2>
+    <form class="inline" method="post" action="/sites/<%= site.id %>/audit">
+      <button class="btn" type="submit">Run audit</button>
+    </form>
+  </div>
+
+  <% if (!audit || !audit.findings || audit.findings.length === 0) { %>
+    <p class="muted">No audit findings yet. Run an audit to surface fixable SEO gaps.</p>
+  <% } else { %>
+    <p class="muted">Found <%= audit.findings.length %> fixable item(s) &middot; audited <%= new Date(audit.captured_at).toLocaleString() %>. Tick the ones to apply, then deploy.</p>
+    <form method="post" action="/sites/<%= site.id %>/deploy">
+      <table>
+        <thead>
+          <tr><th></th><th>Post</th><th>Field</th><th>Issue</th><th>Suggested value</th></tr>
+        </thead>
+        <tbody>
+          <% audit.findings.forEach(function (f) { %>
+            <tr>
+              <td><input type="checkbox" name="keys" value="<%= f.key %>"></td>
+              <td><%= f.label %> <span class="muted">#<%= f.id %></span></td>
+              <td><code><%= f.field %></code></td>
+              <td><%= f.reason %></td>
+              <td><span class="muted"><%= f.suggested %></span></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+      <p style="margin-top:12px;"><button class="btn btn--primary" type="submit">Deploy selected</button></p>
+    </form>
+  <% } %>
+</div>
+
+<div class="card" style="margin-top:18px;">
+  <h2 style="margin:0 0 10px;font-size:15px;">Deployments</h2>
+  <% if (!deployments || deployments.length === 0) { %>
+    <p class="muted">No deployments yet.</p>
+  <% } else { %>
+    <table>
+      <thead><tr><th>Deploy</th><th>Status</th><th>Changes</th><th>When</th><th></th></tr></thead>
+      <tbody>
+        <% deployments.forEach(function (d) { %>
+          <tr>
+            <td><code><%= d.deploy_id %></code></td>
+            <td>
+              <% if (d.status === 'deployed') { %><span class="pill pill--good">deployed</span>
+              <% } else { %><span class="pill pill--stale">rolled back</span><% } %>
+            </td>
+            <td><%= (d.changes || []).length %></td>
+            <td><%= new Date(d.created_at).toLocaleString() %></td>
+            <td>
+              <% if (d.status === 'deployed') { %>
+                <form class="inline" method="post" action="/deployments/<%= d.deploy_id %>/rollback">
+                  <button class="btn" type="submit">Rollback</button>
+                </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>

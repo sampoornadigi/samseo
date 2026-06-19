@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Database {
 
 	/** Bump when table structure changes so the upgrade routine re-runs dbDelta. */
-	const DB_VERSION     = '2';
+	const DB_VERSION     = '3';
 	const OPT_DB_VERSION = 'sampoorna_seo_db_version';
 
 	/**
@@ -94,6 +94,16 @@ class Database {
 	}
 
 	/**
+	 * Fully-qualified control-plane changes (deployment journal) table name.
+	 *
+	 * @return string
+	 */
+	public static function changes_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'sampoorna_seo_changes';
+	}
+
+	/**
 	 * Run table creation if the plugin DB version changed. Cheap to call on load.
 	 *
 	 * @return void
@@ -122,6 +132,7 @@ class Database {
 		$sugg            = self::suggestions_table();
 		$redirects       = self::redirects_table();
 		$not_found       = self::not_found_table();
+		$changes         = self::changes_table();
 
 		$sql = array();
 
@@ -243,6 +254,21 @@ class Database {
 			PRIMARY KEY  (id),
 			UNIQUE KEY uniq_url (url_hash),
 			KEY status (status)
+		) {$charset_collate};";
+
+		$sql[] = "CREATE TABLE {$changes} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			deploy_id VARCHAR(64) NOT NULL,
+			object_type VARCHAR(10) NOT NULL DEFAULT 'post',
+			object_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+			field VARCHAR(40) NOT NULL,
+			old_value LONGTEXT NULL,
+			new_value LONGTEXT NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'applied',
+			created_at DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			KEY deploy (deploy_id),
+			KEY object (object_type, object_id)
 		) {$charset_collate};";
 
 		foreach ( $sql as $stmt ) {
@@ -895,5 +921,86 @@ class Database {
 		$sql = "UPDATE {$table} SET status=%s WHERE id IN ($placeholders)";
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- All values prepared via the spread $args.
 		$wpdb->query( $wpdb->prepare( $sql, ...$args ) );
+	}
+
+	/* ---------- Control-plane deployment journal ---------- */
+
+	/**
+	 * Record one applied change in the deployment journal.
+	 *
+	 * @param array<string,mixed> $row { deploy_id, object_type, object_id, field, old_value, new_value }.
+	 * @return void
+	 */
+	public static function record_change( array $row ) {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom plugin table; no caching for a write.
+		$wpdb->insert(
+			self::changes_table(),
+			array(
+				'deploy_id'   => (string) $row['deploy_id'],
+				'object_type' => (string) $row['object_type'],
+				'object_id'   => (int) $row['object_id'],
+				'field'       => (string) $row['field'],
+				'old_value'   => (string) $row['old_value'],
+				'new_value'   => (string) $row['new_value'],
+				'status'      => 'applied',
+				'created_at'  => current_time( 'mysql' ),
+			),
+			array( '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' )
+		);
+	}
+
+	/**
+	 * Fetch journal rows for a deployment.
+	 *
+	 * @param string $deploy_id Deployment ID.
+	 * @param string $status    Optional status filter ('' = all).
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function changes_for_deploy( $deploy_id, $status = '' ) {
+		global $wpdb;
+		$table = self::changes_table();
+		if ( '' !== $status ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table from $wpdb->prefix; values prepared.
+			$sql = $wpdb->prepare( "SELECT * FROM {$table} WHERE deploy_id=%s AND status=%s ORDER BY id ASC", $deploy_id, $status );
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table from $wpdb->prefix; value prepared.
+			$sql = $wpdb->prepare( "SELECT * FROM {$table} WHERE deploy_id=%s ORDER BY id ASC", $deploy_id );
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- $sql prepared above.
+		$rows = $wpdb->get_results( $sql, ARRAY_A );
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
+	 * Whether any journal rows exist for a deployment.
+	 *
+	 * @param string $deploy_id Deployment ID.
+	 * @return bool
+	 */
+	public static function deploy_exists( $deploy_id ) {
+		global $wpdb;
+		$table = self::changes_table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table from $wpdb->prefix; value prepared.
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE deploy_id=%s", $deploy_id ) ) > 0;
+	}
+
+	/**
+	 * Update the status of a single journal row.
+	 *
+	 * @param int    $id     Row ID.
+	 * @param string $status applied|rolled_back.
+	 * @return void
+	 */
+	public static function set_change_status( $id, $status ) {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom plugin table; no caching for a write.
+		$wpdb->update(
+			self::changes_table(),
+			array( 'status' => (string) $status ),
+			array( 'id' => (int) $id ),
+			array( '%s' ),
+			array( '%d' )
+		);
 	}
 }
