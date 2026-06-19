@@ -5,10 +5,9 @@
 
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { applyDescriptor, enroll, getById, list, secretFor } from '../repo/sites.js';
-import { deploy, pullMetrics, pullStatus, rollback, runAudit } from '../client/siteClient.js';
-import { score } from '../score/scorer.js';
-import { insertSnapshot, latestForSite, latestOverallBySite, snapshotCount } from '../repo/metrics.js';
+import { enroll, getById, list, secretFor } from '../repo/sites.js';
+import { deploy, rollback, runAudit } from '../client/siteClient.js';
+import { latestForSite, latestOverallBySite, snapshotCount } from '../repo/metrics.js';
 import {
   changesFromKeys,
   getByDeployId,
@@ -22,6 +21,7 @@ import { addPrompt, latestResults, listPrompts, recordResults } from '../repo/ci
 import { makeLlmClient } from '../llm/client.js';
 import { sample } from '../citation/sampler.js';
 import { readSession } from '../auth/session.js';
+import { refreshAllSites, refreshSite } from '../services/refresh.js';
 
 /** The site's domain host for citation detection. */
 function siteHost(url: string): string {
@@ -119,17 +119,13 @@ export function registerDashboard(app: FastifyInstance): void {
       return reply.code(404).send({ error: 'site secret missing' });
     }
 
-    const status = await pullStatus(site, secret);
-    if (status.ok && status.descriptor) {
-      await applyDescriptor(site.key_id, status.descriptor);
-    }
-
-    const metrics = await pullMetrics(site, secret);
-    if (metrics.ok && metrics.signals) {
-      const scores = score(metrics.signals);
-      await insertSnapshot(site.id, metrics.signals, scores);
-    }
+    await refreshSite(site, secret);
     // Re-render the list regardless; failures simply leave stale data in place.
+    return reply.redirect('/');
+  });
+
+  app.post('/refresh-all', async (_request, reply) => {
+    await refreshAllSites();
     return reply.redirect('/');
   });
 

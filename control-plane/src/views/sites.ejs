@@ -1,7 +1,12 @@
 <div class="card">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
     <h2 style="margin:0;font-size:15px;">Enrolled sites (<%= sites.length %>)</h2>
-    <a class="btn btn--primary" href="/sites/new">Enroll a site</a>
+    <span>
+      <% if (sites.length > 0) { %>
+        <form class="inline" method="post" action="/refresh-all" style="display:inline;"><button class="btn" type="submit">Refresh all</button></form>
+      <% } %>
+      <a class="btn btn--primary" href="/sites/new">Enroll a site</a>
+    </span>
   </div>
 
   <% if (sites.length === 0) { %>

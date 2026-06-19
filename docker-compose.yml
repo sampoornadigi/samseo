@@ -133,6 +133,8 @@ services:
       CP_ADMIN_USER: ${CP_ADMIN_USER:-admin}
       CP_ADMIN_PASSWORD: ${CP_ADMIN_PASSWORD:-changeme-dev}
       CP_SESSION_SECRET: ${CP_SESSION_SECRET:-dev-session-secret-change-me}
+      # Background metric refresh of all sites every N minutes (0 disables).
+      CP_REFRESH_MINUTES: ${CP_REFRESH_MINUTES:-30}
     ports:
       - "8090:3000"
     volumes:

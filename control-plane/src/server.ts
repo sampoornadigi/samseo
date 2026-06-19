@@ -17,6 +17,7 @@ import { registerAnnounce } from './routes/announce.js';
 import { registerDashboard } from './routes/dashboard.js';
 import { registerAuth, seedAdmin } from './routes/auth.js';
 import { readSession } from './auth/session.js';
+import { startScheduler } from './scheduler.js';
 
 const viewsDir = join(dirname(fileURLToPath(import.meta.url)), 'views');
 
@@ -74,6 +75,7 @@ export async function build() {
   registerDashboard(app);
 
   await seedAdmin(app.log);
+  startScheduler(app.log);
   return app;
 }
 

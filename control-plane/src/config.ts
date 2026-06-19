@@ -30,4 +30,6 @@ export const config = {
   adminUser: process.env.CP_ADMIN_USER ?? 'admin',
   /** Password for the auto-seeded initial admin; empty = no auto-seed. */
   adminPassword: process.env.CP_ADMIN_PASSWORD ?? '',
+  /** Minutes between scheduled metric refreshes of all sites; 0 disables. */
+  refreshMinutes: Number(process.env.CP_REFRESH_MINUTES ?? 0),
 } as const;
