@@ -24,6 +24,7 @@
 
 	function runImport( btn ) {
 		var source = btn.getAttribute( 'data-source' ) || '',
+			objectType = btn.getAttribute( 'data-type' ) || 'post',
 			total = parseInt( btn.getAttribute( 'data-total' ) || '0', 10 ),
 			wrap = document.querySelector( '.sseo-migrate-progress[data-slug="' + source + '"]' ),
 			bar = wrap ? wrap.querySelector( '.sseo-migrate-bar' ) : null,
@@ -41,6 +42,7 @@
 			body.set( 'action', 'sampoorna_seo_migrate_batch' );
 			body.set( 'nonce', cfg.nonce || '' );
 			body.set( 'source', source );
+			body.set( 'object_type', objectType );
 			body.set( 'after_id', String( afterId ) );
 
 			fetch( cfg.ajaxUrl, {

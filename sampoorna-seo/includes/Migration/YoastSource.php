@@ -137,4 +137,106 @@ class YoastSource implements Source {
 
 		return $out;
 	}
+
+	/**
+	 * Yoast stores term SEO in the `wpseo_taxonomy_meta` OPTION (not termmeta):
+	 * [ taxonomy => [ term_id => { wpseo_title, wpseo_desc, ... } ] ]. This is
+	 * the documented §4.9 trap.
+	 *
+	 * @return array<int,array<string,mixed>> term_id => field map.
+	 */
+	private function term_store() {
+		$opt = get_option( 'wpseo_taxonomy_meta', array() );
+		if ( ! is_array( $opt ) ) {
+			return array();
+		}
+		$by_term = array();
+		foreach ( $opt as $terms ) {
+			if ( ! is_array( $terms ) ) {
+				continue;
+			}
+			foreach ( $terms as $term_id => $fields ) {
+				if ( is_array( $fields ) && ! empty( $fields ) ) {
+					$by_term[ (int) $term_id ] = $fields;
+				}
+			}
+		}
+		return $by_term;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return int
+	 */
+	public function term_count() {
+		return count( $this->term_store() );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int $after_id Return IDs greater than this.
+	 * @param int $limit    Maximum IDs to return.
+	 * @return int[]
+	 */
+	public function term_ids( $after_id, $limit ) {
+		$ids = array_keys( $this->term_store() );
+		sort( $ids, SORT_NUMERIC );
+		$out = array();
+		foreach ( $ids as $id ) {
+			if ( $id > (int) $after_id ) {
+				$out[] = (int) $id;
+			}
+			if ( count( $out ) >= (int) $limit ) {
+				break;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int $term_id Term ID.
+	 * @return array<string,string>
+	 */
+	public function read_term( $term_id ) {
+		$store = $this->term_store();
+		$row   = isset( $store[ (int) $term_id ] ) ? $store[ (int) $term_id ] : array();
+		if ( empty( $row ) ) {
+			return array();
+		}
+
+		$map       = array(
+			'wpseo_title'                 => 'title',
+			'wpseo_desc'                  => 'desc',
+			'wpseo_canonical'             => 'canonical',
+			'wpseo_opengraph-title'       => 'og_title',
+			'wpseo_opengraph-description' => 'og_desc',
+			'wpseo_opengraph-image'       => 'og_image',
+		);
+		$tokenized = array( 'title', 'desc', 'og_title', 'og_desc' );
+
+		$out = array();
+		foreach ( $map as $src => $field ) {
+			$value = isset( $row[ $src ] ) ? (string) $row[ $src ] : '';
+			if ( '' === $value ) {
+				continue;
+			}
+			if ( in_array( $field, $tokenized, true ) ) {
+				$value = TokenNormalizer::normalize_yoast( $value );
+			}
+			if ( '' !== $value ) {
+				$out[ $field ] = $value;
+			}
+		}
+
+		// Term noindex is the string 'noindex' (vs 'index'/'default').
+		if ( isset( $row['wpseo_noindex'] ) && 'noindex' === (string) $row['wpseo_noindex'] ) {
+			$out['robots_noindex'] = '1';
+		}
+
+		return $out;
+	}
 }

@@ -47,11 +47,11 @@ class Registry {
 	}
 
 	/**
-	 * Sources whose data is present on this site.
+	 * Sources with post or term data present on this site.
 	 *
 	 * @return Source[]
 	 */
 	public static function detected() {
-		return array_values( array_filter( self::sources(), static fn( $s ) => $s->is_present() ) );
+		return array_values( array_filter( self::sources(), static fn( $s ) => $s->is_present() || $s->term_count() > 0 ) );
 	}
 }

@@ -99,10 +99,42 @@ class AdminPage {
 	 * @return void
 	 */
 	public function handle_dryrun() {
-		$source = $this->guard_and_source();
-		set_transient( self::DRY_PREFIX . get_current_user_id(), Migrator::diff( $source, 1000 ), 5 * MINUTE_IN_SECONDS );
+		$source   = $this->guard_and_source();
+		$combined = self::merge_runs(
+			Migrator::diff( $source, 1000, 'post' ),
+			Migrator::diff( $source, 1000, 'term' ),
+			array( 'add', 'same', 'skip_exists' ),
+			'posts'
+		);
+		set_transient( self::DRY_PREFIX . get_current_user_id(), $combined, 5 * MINUTE_IN_SECONDS );
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE . '&sampoorna_seo_notice=migrate_dry' ) );
 		exit;
+	}
+
+	/**
+	 * Merge two run results (post + term) into one for display.
+	 *
+	 * @param array<string,mixed> $a       First run.
+	 * @param array<string,mixed> $b       Second run.
+	 * @param string[]            $count_keys Keys inside 'counts' to sum.
+	 * @param string              $total_key  Top-level total key to sum ('posts' or 'checked').
+	 * @return array<string,mixed>
+	 */
+	private static function merge_runs( array $a, array $b, array $count_keys, $total_key ) {
+		$out = $a;
+		if ( isset( $a['counts'], $b['counts'] ) ) {
+			foreach ( $count_keys as $k ) {
+				$out['counts'][ $k ] = (int) $a['counts'][ $k ] + (int) $b['counts'][ $k ];
+			}
+		}
+		foreach ( array( 'match', 'mismatch' ) as $k ) {
+			if ( isset( $a[ $k ], $b[ $k ] ) ) {
+				$out[ $k ] = (int) $a[ $k ] + (int) $b[ $k ];
+			}
+		}
+		$out[ $total_key ] = (int) ( $a[ $total_key ] ?? 0 ) + (int) ( $b[ $total_key ] ?? 0 );
+		$out['sample']     = array_slice( array_merge( $a['sample'], $b['sample'] ), 0, Migrator::SAMPLE_CAP );
+		return $out;
 	}
 
 	/**
@@ -111,8 +143,14 @@ class AdminPage {
 	 * @return void
 	 */
 	public function handle_verify() {
-		$source = $this->guard_and_source();
-		set_transient( self::VERIFY_PREFIX . get_current_user_id(), Migrator::verify( $source, 0 ), 5 * MINUTE_IN_SECONDS );
+		$source   = $this->guard_and_source();
+		$combined = self::merge_runs(
+			Migrator::verify( $source, 0, 'post' ),
+			Migrator::verify( $source, 0, 'term' ),
+			array(),
+			'checked'
+		);
+		set_transient( self::VERIFY_PREFIX . get_current_user_id(), $combined, 5 * MINUTE_IN_SECONDS );
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE . '&sampoorna_seo_notice=migrate_verify' ) );
 		exit;
 	}
@@ -133,7 +171,8 @@ class AdminPage {
 			wp_send_json_error( array( 'message' => __( 'Unknown migration source.', 'sampoorna-seo' ) ) );
 		}
 		$after = isset( $_POST['after_id'] ) ? absint( wp_unslash( $_POST['after_id'] ) ) : 0;
-		wp_send_json_success( Migrator::import( $source, self::BATCH, $after ) );
+		$type  = isset( $_POST['object_type'] ) && 'term' === sanitize_key( wp_unslash( $_POST['object_type'] ) ) ? 'term' : 'post';
+		wp_send_json_success( Migrator::import( $source, self::BATCH, $after, $type ) );
 	}
 
 	/**
@@ -176,13 +215,21 @@ class AdminPage {
 			}
 			?>
 
-			<?php foreach ( $detected as $source ) : ?>
-				<?php $slug = $source->slug(); ?>
+			<?php
+			foreach ( $detected as $source ) :
+				$slug       = $source->slug();
+				$post_total = $source->count();
+				$term_total = $source->term_count();
+				?>
 				<h2><?php echo esc_html( $source->label() ); ?></h2>
 				<p>
 					<?php
-					/* translators: %d: number of posts with source SEO data. */
-					echo esc_html( sprintf( _n( '%d post has data to import.', '%d posts have data to import.', $source->count(), 'sampoorna-seo' ), $source->count() ) );
+					printf(
+						/* translators: 1: number of posts, 2: number of terms. */
+						esc_html__( '%1$d posts and %2$d terms have data to import.', 'sampoorna-seo' ),
+						(int) $post_total,
+						(int) $term_total
+					);
 					?>
 				</p>
 
@@ -192,7 +239,10 @@ class AdminPage {
 						<input type="hidden" name="source" value="<?php echo esc_attr( $slug ); ?>" />
 						<button class="button"><?php esc_html_e( 'Dry run (preview)', 'sampoorna-seo' ); ?></button>
 					</form>
-					<button class="button button-primary sseo-migrate-start" data-source="<?php echo esc_attr( $slug ); ?>" data-total="<?php echo esc_attr( (string) $source->count() ); ?>"><?php esc_html_e( 'Import now', 'sampoorna-seo' ); ?></button>
+					<button class="button button-primary sseo-migrate-start" data-source="<?php echo esc_attr( $slug ); ?>" data-type="post" data-total="<?php echo esc_attr( (string) $post_total ); ?>"><?php esc_html_e( 'Import posts', 'sampoorna-seo' ); ?></button>
+					<?php if ( $term_total > 0 ) : ?>
+						<button class="button button-primary sseo-migrate-start" data-source="<?php echo esc_attr( $slug ); ?>" data-type="term" data-total="<?php echo esc_attr( (string) $term_total ); ?>"><?php esc_html_e( 'Import terms', 'sampoorna-seo' ); ?></button>
+					<?php endif; ?>
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php?action=sampoorna_seo_migrate_verify' ) ); ?>" style="display:inline;">
 						<?php wp_nonce_field( self::NONCE ); ?>
 						<input type="hidden" name="source" value="<?php echo esc_attr( $slug ); ?>" />
@@ -212,8 +262,8 @@ class AdminPage {
 				<p>
 					<?php
 					printf(
-						/* translators: 1: posts scanned, 2: fields to add, 3: already-set fields skipped, 4: unchanged fields. */
-						esc_html__( 'Scanned %1$d posts: %2$d fields to add, %3$d skipped (already set), %4$d already match.', 'sampoorna-seo' ),
+						/* translators: 1: objects scanned, 2: fields to add, 3: already-set fields skipped, 4: unchanged fields. */
+						esc_html__( 'Scanned %1$d objects: %2$d fields to add, %3$d skipped (already set), %4$d already match.', 'sampoorna-seo' ),
 						(int) $dry['posts'],
 						(int) $dry['counts']['add'],
 						(int) $dry['counts']['skip_exists'],

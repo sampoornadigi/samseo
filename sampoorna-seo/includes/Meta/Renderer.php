@@ -75,14 +75,15 @@ class Renderer {
 	public function filter_robots( $robots ) {
 		try {
 			$post = $this->singular_post();
-			if ( ! $post ) {
+			$term = $post ? null : $this->queried_term();
+			if ( ! $post && ! $term ) {
 				return $robots;
 			}
-			if ( '' !== MetaStore::get( $post->ID, 'robots_noindex' ) ) {
+			if ( '' !== $this->meta_get( 'robots_noindex' ) ) {
 				$robots['noindex'] = true;
 				unset( $robots['index'] );
 			}
-			if ( '' !== MetaStore::get( $post->ID, 'robots_nofollow' ) ) {
+			if ( '' !== $this->meta_get( 'robots_nofollow' ) ) {
 				$robots['nofollow'] = true;
 				unset( $robots['follow'] );
 			}
@@ -102,7 +103,7 @@ class Renderer {
 			if ( is_feed() || is_robots() || is_404() ) {
 				return;
 			}
-			if ( ! is_singular() && ! is_front_page() && ! is_home() ) {
+			if ( ! is_singular() && ! is_front_page() && ! is_home() && ! $this->is_term_archive() ) {
 				return;
 			}
 
@@ -111,9 +112,11 @@ class Renderer {
 			$canonical   = $this->computed_canonical();
 			$post        = $this->singular_post();
 
-			$og_title = $post && '' !== MetaStore::get( $post->ID, 'og_title' ) ? MetaStore::get( $post->ID, 'og_title' ) : $title;
-			$og_desc  = $post && '' !== MetaStore::get( $post->ID, 'og_desc' ) ? MetaStore::get( $post->ID, 'og_desc' ) : $description;
-			$og_image = $this->computed_og_image( $post );
+			$ogt      = $this->meta_get( 'og_title' );
+			$ogd      = $this->meta_get( 'og_desc' );
+			$og_title = '' !== $ogt ? $ogt : $title;
+			$og_desc  = '' !== $ogd ? $ogd : $description;
+			$og_image = $post ? $this->computed_og_image( $post ) : $this->meta_get( 'og_image' );
 			$og_type  = is_singular( 'post' ) ? 'article' : 'website';
 
 			echo "\n<!-- Sampoorna SEO -->\n";
@@ -172,6 +175,46 @@ class Renderer {
 	}
 
 	/**
+	 * The current queried term when the request is a category/tag/taxonomy archive.
+	 *
+	 * @return \WP_Term|null
+	 */
+	private function queried_term() {
+		if ( ! is_category() && ! is_tag() && ! is_tax() ) {
+			return null;
+		}
+		$term = get_queried_object();
+		return $term instanceof \WP_Term ? $term : null;
+	}
+
+	/**
+	 * Whether the current request is a term archive we render.
+	 *
+	 * @return bool
+	 */
+	private function is_term_archive() {
+		return null !== $this->queried_term();
+	}
+
+	/**
+	 * Read an override field for the current context (post, else term).
+	 *
+	 * @param string $field Logical field name.
+	 * @return string
+	 */
+	private function meta_get( $field ) {
+		$post = $this->singular_post();
+		if ( $post ) {
+			return MetaStore::get( $post->ID, $field );
+		}
+		$term = $this->queried_term();
+		if ( $term ) {
+			return TermMeta::get( $term->term_id, $field );
+		}
+		return '';
+	}
+
+	/**
 	 * Resolve the document title for the current context.
 	 *
 	 * @return string
@@ -186,6 +229,12 @@ class Renderer {
 			$override = MetaStore::get( $post->ID, 'title' );
 			$template = '' !== $override ? $override : (string) get_option( 'sampoorna_seo_title_template', '%title% %sep% %sitename%' );
 			return TemplateEngine::render( $template, $context );
+		}
+		$term = $this->queried_term();
+		if ( $term ) {
+			$override = TermMeta::get( $term->term_id, 'title' );
+			$template = '' !== $override ? $override : (string) get_option( 'sampoorna_seo_tax_title_template', '%title% %sep% %sitename%' );
+			return TemplateEngine::render( $template, array( 'title' => $term->name ) );
 		}
 		if ( is_front_page() ) {
 			$name    = get_bloginfo( 'name' );
@@ -210,6 +259,14 @@ class Renderer {
 			$template = (string) get_option( 'sampoorna_seo_desc_template', '%excerpt%' );
 			return TemplateEngine::render( $template, array( 'post' => $post ) );
 		}
+		$term = $this->queried_term();
+		if ( $term ) {
+			$override = TermMeta::get( $term->term_id, 'desc' );
+			if ( '' !== $override ) {
+				return TemplateEngine::render( $override, array( 'title' => $term->name ) );
+			}
+			return trim( (string) wp_strip_all_tags( (string) $term->description ) );
+		}
 		if ( is_front_page() ) {
 			return get_bloginfo( 'description' );
 		}
@@ -230,6 +287,15 @@ class Renderer {
 			}
 			$canonical = wp_get_canonical_url( $post );
 			return false !== $canonical ? $canonical : (string) get_permalink( $post );
+		}
+		$term = $this->queried_term();
+		if ( $term ) {
+			$override = TermMeta::get( $term->term_id, 'canonical' );
+			if ( '' !== $override ) {
+				return $override;
+			}
+			$link = get_term_link( $term );
+			return is_wp_error( $link ) ? '' : (string) $link;
 		}
 		if ( is_front_page() ) {
 			return home_url( '/' );

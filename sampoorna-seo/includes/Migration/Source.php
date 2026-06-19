@@ -69,4 +69,28 @@ interface Source {
 	 * @return array<string,string>
 	 */
 	public function read( $post_id );
+
+	/**
+	 * Number of terms carrying this source's SEO data.
+	 *
+	 * @return int
+	 */
+	public function term_count();
+
+	/**
+	 * Term IDs carrying source data, ascending, after a cursor.
+	 *
+	 * @param int $after_id Return IDs greater than this (0 = from the start).
+	 * @param int $limit    Maximum IDs to return.
+	 * @return int[]
+	 */
+	public function term_ids( $after_id, $limit );
+
+	/**
+	 * Read one term's source SEO meta as logical fields (subset of MetaStore::fields()).
+	 *
+	 * @param int $term_id Term ID.
+	 * @return array<string,string>
+	 */
+	public function read_term( $term_id );
 }

@@ -116,11 +116,24 @@ class RankMathSource implements Source {
 	 * @return array<string,string>
 	 */
 	public function read( $post_id ) {
-		$post_id = (int) $post_id;
-		$out     = array();
+		return $this->read_object( (int) $post_id, false );
+	}
+
+	/**
+	 * Read Rank Math meta for a post or term (same `rank_math_*` keys).
+	 *
+	 * @param int  $object_id Post or term ID.
+	 * @param bool $is_term   Whether to read term meta.
+	 * @return array<string,string>
+	 */
+	private function read_object( $object_id, $is_term ) {
+		$get = static function ( $key ) use ( $object_id, $is_term ) {
+			return $is_term ? get_term_meta( $object_id, $key, true ) : get_post_meta( $object_id, $key, true );
+		};
+		$out = array();
 
 		foreach ( self::MAP as $meta_key => $field ) {
-			$value = (string) get_post_meta( $post_id, $meta_key, true );
+			$value = (string) $get( $meta_key );
 			if ( '' === $value ) {
 				continue;
 			}
@@ -133,7 +146,7 @@ class RankMathSource implements Source {
 		}
 
 		// Focus keyword is a comma-separated list; the first is primary.
-		$focus = (string) get_post_meta( $post_id, 'rank_math_focus_keyword', true );
+		$focus = (string) $get( 'rank_math_focus_keyword' );
 		if ( '' !== $focus ) {
 			$parts = explode( ',', $focus );
 			$first = trim( (string) $parts[0] );
@@ -143,7 +156,7 @@ class RankMathSource implements Source {
 		}
 
 		// Robots is a serialized array of directives.
-		$robots = get_post_meta( $post_id, 'rank_math_robots', true );
+		$robots = $get( 'rank_math_robots' );
 		if ( is_array( $robots ) ) {
 			if ( in_array( 'noindex', $robots, true ) ) {
 				$out['robots_noindex'] = '1';
@@ -154,5 +167,47 @@ class RankMathSource implements Source {
 		}
 
 		return $out;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return int
+	 */
+	public function term_count() {
+		global $wpdb;
+		$keys         = $this->keys();
+		$placeholders = implode( ',', array_fill( 0, count( $keys ), '%s' ) );
+		$sql          = "SELECT COUNT(DISTINCT term_id) FROM {$wpdb->termmeta} WHERE meta_key IN ({$placeholders}) AND meta_value <> ''";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Termmeta scan; $placeholders is a built %s list, $keys bound via prepare().
+		return (int) $wpdb->get_var( $wpdb->prepare( $sql, $keys ) );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int $after_id Return IDs greater than this.
+	 * @param int $limit    Maximum IDs to return.
+	 * @return int[]
+	 */
+	public function term_ids( $after_id, $limit ) {
+		global $wpdb;
+		$keys         = $this->keys();
+		$placeholders = implode( ',', array_fill( 0, count( $keys ), '%s' ) );
+		$params       = array_merge( $keys, array( (int) $after_id, (int) $limit ) );
+		$sql          = "SELECT DISTINCT term_id FROM {$wpdb->termmeta} WHERE meta_key IN ({$placeholders}) AND meta_value <> '' AND term_id > %d ORDER BY term_id ASC LIMIT %d";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Termmeta scan; $placeholders is a built %s list, all values bound via prepare().
+		$ids = $wpdb->get_col( $wpdb->prepare( $sql, $params ) );
+		return array_map( 'intval', (array) $ids );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int $term_id Term ID.
+	 * @return array<string,string>
+	 */
+	public function read_term( $term_id ) {
+		return $this->read_object( (int) $term_id, true );
 	}
 }

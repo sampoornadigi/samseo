@@ -50,13 +50,32 @@ class AioseoSource implements Source {
 	}
 
 	/**
+	 * The AIOSEO terms table name.
+	 *
+	 * @return string
+	 */
+	private function terms_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'aioseo_terms';
+	}
+
+	/**
 	 * Whether the AIOSEO posts table exists.
 	 *
 	 * @return bool
 	 */
 	private function table_exists() {
+		return $this->exists( $this->table() );
+	}
+
+	/**
+	 * Whether a given table exists.
+	 *
+	 * @param string $table Table name.
+	 * @return bool
+	 */
+	private function exists( $table ) {
 		global $wpdb;
-		$table = $this->table();
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Schema check for an optional third-party table.
 		return (string) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table;
 	}
@@ -118,6 +137,57 @@ class AioseoSource implements Source {
 		$table = $this->table();
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Optional AIOSEO table; name from $wpdb->prefix, value bound via prepare().
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE post_id = %d", (int) $post_id ), ARRAY_A );
+		return is_array( $row ) ? self::map_row( $row ) : array();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return int
+	 */
+	public function term_count() {
+		$table = $this->terms_table();
+		if ( ! $this->exists( $table ) ) {
+			return 0;
+		}
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Optional AIOSEO table; name from $wpdb->prefix, no dynamic values.
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE term_id > 0" );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int $after_id Return IDs greater than this.
+	 * @param int $limit    Maximum IDs to return.
+	 * @return int[]
+	 */
+	public function term_ids( $after_id, $limit ) {
+		$table = $this->terms_table();
+		if ( ! $this->exists( $table ) ) {
+			return array();
+		}
+		global $wpdb;
+		$sql = "SELECT DISTINCT term_id FROM {$table} WHERE term_id > %d ORDER BY term_id ASC LIMIT %d";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Optional AIOSEO table; name from $wpdb->prefix, values bound via prepare().
+		$ids = $wpdb->get_col( $wpdb->prepare( $sql, (int) $after_id, (int) $limit ) );
+		return array_map( 'intval', (array) $ids );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int $term_id Term ID.
+	 * @return array<string,string>
+	 */
+	public function read_term( $term_id ) {
+		$table = $this->terms_table();
+		if ( ! $this->exists( $table ) ) {
+			return array();
+		}
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Optional AIOSEO table; name from $wpdb->prefix, value bound via prepare().
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE term_id = %d", (int) $term_id ), ARRAY_A );
 		return is_array( $row ) ? self::map_row( $row ) : array();
 	}
 
