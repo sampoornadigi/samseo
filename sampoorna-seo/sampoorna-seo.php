@@ -83,8 +83,9 @@ function sampoorna_seo_init() {
 	\Sampoorna\SEO\Technical\Hreflang::instance();
 	\Sampoorna\SEO\Technical\IndexNow::instance();
 
-	// GEO / AI visibility (Phase 5): llms.txt / llms-full.txt.
+	// GEO / AI visibility (Phase 5): llms.txt / llms-full.txt + AI-crawler logging.
 	\Sampoorna\SEO\Geo\LlmsTxt::instance();
+	\Sampoorna\SEO\Geo\CrawlerLog::instance();
 
 	// Schema (Phase 2): connected JSON-LD @graph (front-end) + extra node types.
 	\Sampoorna\SEO\Schema\Graph::instance();
@@ -105,6 +106,7 @@ function sampoorna_seo_init() {
 		\Sampoorna\SEO\Admin\Screens::instance();
 		\Sampoorna\SEO\Admin\MetaBox::instance();
 		\Sampoorna\SEO\Migration\AdminPage::instance();
+		\Sampoorna\SEO\Geo\CrawlerScreen::instance();
 	}
 	// Ensure the inspection tick is scheduled (covers upgrades from earlier versions).
 	if ( ! wp_next_scheduled( SAMPOORNA_SEO_INSPECT_HOOK ) ) {

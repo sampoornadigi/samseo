@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Database {
 
 	/** Bump when table structure changes so the upgrade routine re-runs dbDelta. */
-	const DB_VERSION     = '3';
+	const DB_VERSION     = '4';
 	const OPT_DB_VERSION = 'sampoorna_seo_db_version';
 
 	/**
@@ -104,6 +104,16 @@ class Database {
 	}
 
 	/**
+	 * Fully-qualified AI-crawler hit-log table name.
+	 *
+	 * @return string
+	 */
+	public static function ai_hits_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'sampoorna_seo_ai_hits';
+	}
+
+	/**
 	 * Run table creation if the plugin DB version changed. Cheap to call on load.
 	 *
 	 * @return void
@@ -133,6 +143,7 @@ class Database {
 		$redirects       = self::redirects_table();
 		$not_found       = self::not_found_table();
 		$changes         = self::changes_table();
+		$ai_hits         = self::ai_hits_table();
 
 		$sql = array();
 
@@ -269,6 +280,17 @@ class Database {
 			PRIMARY KEY  (id),
 			KEY deploy (deploy_id),
 			KEY object (object_type, object_id)
+		) {$charset_collate};";
+
+		$sql[] = "CREATE TABLE {$ai_hits} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			bot VARCHAR(64) NOT NULL,
+			hits BIGINT UNSIGNED NOT NULL DEFAULT 0,
+			last_url VARCHAR(512) NOT NULL DEFAULT '',
+			first_seen DATETIME NOT NULL,
+			last_seen DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY uniq_bot (bot)
 		) {$charset_collate};";
 
 		foreach ( $sql as $stmt ) {
@@ -1002,5 +1024,36 @@ class Database {
 			array( '%s' ),
 			array( '%d' )
 		);
+	}
+
+	/* ---------- AI-crawler engagement log ---------- */
+
+	/**
+	 * Record one AI-bot hit (upsert by bot key, incrementing the counter).
+	 *
+	 * @param string $bot Bot key.
+	 * @param string $url Requested URL.
+	 * @return void
+	 */
+	public static function record_ai_hit( $bot, $url ) {
+		global $wpdb;
+		$table = self::ai_hits_table();
+		$now   = current_time( 'mysql' );
+		$sql   = "INSERT INTO {$table} (bot, hits, last_url, first_seen, last_seen) VALUES (%s, 1, %s, %s, %s) ON DUPLICATE KEY UPDATE hits = hits + 1, last_url = VALUES(last_url), last_seen = VALUES(last_seen)";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Table from $wpdb->prefix; all values bound via prepare().
+		$wpdb->query( $wpdb->prepare( $sql, $bot, $url, $now, $now ) );
+	}
+
+	/**
+	 * Fetch the AI-crawler hit log, most-recently-seen first.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function ai_hits() {
+		global $wpdb;
+		$table = self::ai_hits_table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table from $wpdb->prefix; no dynamic values.
+		$rows = $wpdb->get_results( "SELECT * FROM {$table} ORDER BY last_seen DESC", ARRAY_A );
+		return is_array( $rows ) ? $rows : array();
 	}
 }
