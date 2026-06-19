@@ -83,6 +83,9 @@ function sampoorna_seo_init() {
 	\Sampoorna\SEO\Technical\Hreflang::instance();
 	\Sampoorna\SEO\Technical\IndexNow::instance();
 
+	// GEO / AI visibility (Phase 5): llms.txt / llms-full.txt.
+	\Sampoorna\SEO\Geo\LlmsTxt::instance();
+
 	// Schema (Phase 2): connected JSON-LD @graph (front-end) + extra node types.
 	\Sampoorna\SEO\Schema\Graph::instance();
 	\Sampoorna\SEO\Schema\Faq::instance();
@@ -134,6 +137,7 @@ function sampoorna_seo_activate() {
 	\Sampoorna\SEO\Technical\Sitemap::instance()->register_rules();
 	\Sampoorna\SEO\Technical\IndexNow::instance()->register_rules();
 	\Sampoorna\SEO\Technical\IndexNow::ensure_key();
+	\Sampoorna\SEO\Geo\LlmsTxt::instance()->register_rules();
 	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'sampoorna_seo_activate' );

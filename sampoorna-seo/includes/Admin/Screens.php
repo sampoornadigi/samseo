@@ -22,6 +22,7 @@ use Sampoorna\SEO\Technical\Robots;
 use Sampoorna\SEO\Technical\IndexNow;
 use Sampoorna\SEO\Schema\Graph;
 use Sampoorna\SEO\Schema\LocalBusiness;
+use Sampoorna\SEO\Geo\LlmsTxt;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -158,6 +159,11 @@ class Screens {
 		update_option( Robots::OPT_BODY, $robots );
 		update_option( IndexNow::OPT_ENABLED, isset( $_POST['sampoorna_seo_indexnow_enabled'] ) ? 1 : 0 );
 		IndexNow::ensure_key();
+
+		// GEO / AI visibility: llms.txt enable + intro.
+		update_option( LlmsTxt::OPT_ENABLED, isset( $_POST['sampoorna_seo_llms_enabled'] ) ? 1 : 0 );
+		$llms_intro = isset( $_POST['sampoorna_seo_llms_intro'] ) ? sanitize_textarea_field( wp_unslash( $_POST['sampoorna_seo_llms_intro'] ) ) : '';
+		update_option( LlmsTxt::OPT_INTRO, $llms_intro );
 
 		// Schema / Organization.
 		$org_name = isset( $_POST['sampoorna_seo_org_name'] ) ? sanitize_text_field( wp_unslash( $_POST['sampoorna_seo_org_name'] ) ) : '';
@@ -712,6 +718,33 @@ class Screens {
 									<a href="<?php echo esc_url( IndexNow::key_file_url() ); ?>" target="_blank"><code><?php echo esc_html( IndexNow::key() . '.txt' ); ?></code></a>
 								</p>
 							<?php endif; ?>
+						</td>
+					</tr>
+				</table>
+
+				<h2><?php esc_html_e( 'GEO / AI visibility', 'sampoorna-seo' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'llms.txt', 'sampoorna-seo' ); ?></th>
+						<td>
+							<label>
+								<input name="sampoorna_seo_llms_enabled" type="checkbox" value="1" <?php checked( LlmsTxt::is_enabled() ); ?>>
+								<?php esc_html_e( 'Serve a curated llms.txt / llms-full.txt for AI crawlers and answer engines.', 'sampoorna-seo' ); ?>
+							</label>
+							<?php if ( LlmsTxt::is_enabled() ) : ?>
+								<p class="description">
+									<a href="<?php echo esc_url( home_url( '/llms.txt' ) ); ?>" target="_blank"><code>/llms.txt</code></a>
+									&middot;
+									<a href="<?php echo esc_url( home_url( '/llms-full.txt' ) ); ?>" target="_blank"><code>/llms-full.txt</code></a>
+								</p>
+							<?php endif; ?>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="sampoorna_seo_llms_intro"><?php esc_html_e( 'llms.txt summary', 'sampoorna-seo' ); ?></label></th>
+						<td>
+							<textarea name="sampoorna_seo_llms_intro" id="sampoorna_seo_llms_intro" class="large-text" rows="3"><?php echo esc_textarea( get_option( LlmsTxt::OPT_INTRO, '' ) ); ?></textarea>
+							<p class="description"><?php esc_html_e( 'One-line summary of the site for the top of llms.txt. Falls back to the site tagline.', 'sampoorna-seo' ); ?></p>
 						</td>
 					</tr>
 				</table>
