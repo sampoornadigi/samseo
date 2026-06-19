@@ -31,7 +31,17 @@
 <body>
   <header>
     <h1>Sampoorna · Control Plane</h1>
-    <nav><a href="/">Sites</a></nav>
+    <nav>
+      <% if (typeof user !== 'undefined' && user) { %>
+        <a href="/">Sites</a>
+        <% if (user.role === 'admin') { %> &middot; <a href="/users">Users</a><% } %>
+        &middot; <span class="muted" style="color:#9ec5fe;"><%= user.username %> (<%= user.role %>)</span>
+        &middot;
+        <form class="inline" method="post" action="/logout" style="display:inline;">
+          <button type="submit" style="background:none;border:0;color:#9ec5fe;cursor:pointer;font:inherit;padding:0;text-decoration:underline;">Log out</button>
+        </form>
+      <% } %>
+    </nav>
   </header>
   <main><%- body %></main>
 </body>

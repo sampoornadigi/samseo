@@ -15,8 +15,14 @@ import ejs from 'ejs';
 import { config } from './config.js';
 import { registerAnnounce } from './routes/announce.js';
 import { registerDashboard } from './routes/dashboard.js';
+import { registerAuth, seedAdmin } from './routes/auth.js';
+import { readSession } from './auth/session.js';
 
 const viewsDir = join(dirname(fileURLToPath(import.meta.url)), 'views');
+
+// Paths reachable without a dashboard session: health, the login form, and the
+// HMAC-signed site→plane announce endpoint (authenticated by its own signature).
+const PUBLIC_PATHS = new Set(['/healthz', '/login', '/sites/announce']);
 
 export async function build() {
   const app = Fastify({ logger: true });
@@ -43,10 +49,31 @@ export async function build() {
   await app.register(formbody);
   await app.register(view, { engine: { ejs }, root: viewsDir, layout: 'layout.ejs' });
 
+  // Auth guard: public paths pass; everything else needs a session, and any
+  // state-changing request (non-GET) needs the admin role (viewers are read-only).
+  app.addHook('onRequest', async (request, reply) => {
+    const path = request.url.split('?')[0];
+    if (PUBLIC_PATHS.has(path)) {
+      return;
+    }
+    const session = readSession(request);
+    if (!session) {
+      return reply.redirect('/login');
+    }
+    if (path === '/logout') {
+      return; // any signed-in user may log out
+    }
+    if (request.method !== 'GET' && session.role !== 'admin') {
+      return reply.code(403).send('Forbidden: your role is read-only.');
+    }
+  });
+
   app.get('/healthz', async () => ({ ok: true }));
+  registerAuth(app);
   registerAnnounce(app);
   registerDashboard(app);
 
+  await seedAdmin(app.log);
   return app;
 }
 

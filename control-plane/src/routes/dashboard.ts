@@ -21,6 +21,7 @@ import {
 import { addPrompt, latestResults, listPrompts, recordResults } from '../repo/citation.js';
 import { makeLlmClient } from '../llm/client.js';
 import { sample } from '../citation/sampler.js';
+import { readSession } from '../auth/session.js';
 
 /** The site's domain host for citation detection. */
 function siteHost(url: string): string {
@@ -39,7 +40,7 @@ interface EnrollForm {
 }
 
 export function registerDashboard(app: FastifyInstance): void {
-  app.get('/', async (_request, reply) => {
+  app.get('/', async (request, reply) => {
     const sites = await list();
     const health = await latestOverallBySite();
     const healthBySite: Record<number, number | null> = {};
@@ -47,7 +48,7 @@ export function registerDashboard(app: FastifyInstance): void {
       const h = health.get(s.id);
       healthBySite[s.id] = h ? h.overall : null;
     }
-    return reply.view('sites.ejs', { title: 'Sites', sites, health: healthBySite, now: Date.now() });
+    return reply.view('sites.ejs', { title: 'Sites', user: readSession(request), sites, health: healthBySite, now: Date.now() });
   });
 
   app.get('/sites/:id', async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
@@ -64,6 +65,7 @@ export function registerDashboard(app: FastifyInstance): void {
     const citations = await latestResults(id);
     return reply.view('site-detail.ejs', {
       title: site.label || site.site_url,
+      user: readSession(request),
       site,
       latest,
       count,
@@ -74,8 +76,8 @@ export function registerDashboard(app: FastifyInstance): void {
     });
   });
 
-  app.get('/sites/new', async (_request, reply) => {
-    return reply.view('new-site.ejs', { title: 'Enroll site', error: '' });
+  app.get('/sites/new', async (request, reply) => {
+    return reply.view('new-site.ejs', { title: 'Enroll site', user: readSession(request), error: '' });
   });
 
   app.post('/sites', async (request: FastifyRequest<{ Body: EnrollForm }>, reply) => {
@@ -88,6 +90,7 @@ export function registerDashboard(app: FastifyInstance): void {
     if (reachUrl === '' || keyId === '' || secret === '') {
       return reply.code(400).view('new-site.ejs', {
         title: 'Enroll site',
+        user: readSession(request),
         error: 'Reachable URL, key id, and secret are required.',
       });
     }
@@ -98,7 +101,7 @@ export function registerDashboard(app: FastifyInstance): void {
       const msg = err instanceof Error && /unique/i.test(err.message)
         ? 'A site with that key id is already enrolled.'
         : 'Could not enroll the site.';
-      return reply.code(400).view('new-site.ejs', { title: 'Enroll site', error: msg });
+      return reply.code(400).view('new-site.ejs', { title: 'Enroll site', user: readSession(request), error: msg });
     }
 
     return reply.redirect('/');

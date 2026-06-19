@@ -24,4 +24,10 @@ export const config = {
   llmKey: process.env.CP_LLM_KEY ?? '',
   /** Model for the citation sampler. */
   llmModel: process.env.CP_LLM_MODEL ?? 'claude-haiku-4-5',
+  /** Secret for signing session cookies (falls back to the vault key). */
+  sessionSecret: process.env.CP_SESSION_SECRET ?? required('CP_VAULT_KEY'),
+  /** Username for the auto-seeded initial admin. */
+  adminUser: process.env.CP_ADMIN_USER ?? 'admin',
+  /** Password for the auto-seeded initial admin; empty = no auto-seed. */
+  adminPassword: process.env.CP_ADMIN_PASSWORD ?? '',
 } as const;

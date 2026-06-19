@@ -1,0 +1,11 @@
+<div class="card" style="max-width:380px;margin:48px auto;">
+  <h2 style="margin:0 0 14px;font-size:16px;">Sign in</h2>
+  <% if (error) { %><div class="err"><%= error %></div><% } %>
+  <form method="post" action="/login">
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" autofocus autocomplete="username">
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" autocomplete="current-password" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:5px;">
+    <p style="margin-top:16px;"><button class="btn btn--primary" type="submit">Sign in</button></p>
+  </form>
+</div>

@@ -1,0 +1,31 @@
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <h2 style="margin:0;font-size:15px;">Operators</h2>
+    <a class="btn" href="/">&larr; Sites</a>
+  </div>
+
+  <table>
+    <thead><tr><th>Username</th><th>Role</th><th>Created</th></tr></thead>
+    <tbody>
+      <% users.forEach(function (u) { %>
+        <tr>
+          <td><strong><%= u.username %></strong></td>
+          <td><%= u.role %></td>
+          <td class="muted"><%= new Date(u.created_at).toLocaleString() %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+
+  <h3 style="font-size:14px;margin:18px 0 6px;">Add operator</h3>
+  <% if (error) { %><div class="err"><%= error %></div><% } %>
+  <form method="post" action="/users" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;max-width:680px;">
+    <input type="text" name="username" placeholder="username" style="padding:8px 10px;border:1px solid var(--line);border-radius:5px;">
+    <input type="password" name="password" placeholder="password (min 8 chars)" style="padding:8px 10px;border:1px solid var(--line);border-radius:5px;">
+    <select name="role" style="padding:8px 10px;border:1px solid var(--line);border-radius:5px;">
+      <option value="viewer">viewer (read-only)</option>
+      <option value="admin">admin (full)</option>
+    </select>
+    <button class="btn btn--primary" type="submit">Add</button>
+  </form>
+</div>
