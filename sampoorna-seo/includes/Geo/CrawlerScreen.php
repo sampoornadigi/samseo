@@ -72,8 +72,9 @@ class CrawlerScreen {
 	 * @return void
 	 */
 	public function render() {
-		$access = AiAccess::report();
-		$hits   = Database::ai_hits();
+		$access    = AiAccess::report();
+		$hits      = Database::ai_hits();
+		$referrals = Database::ai_referrals();
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'AI Crawlers', 'sampoorna-seo' ); ?></h1>
@@ -121,6 +122,31 @@ class CrawlerScreen {
 					<?php foreach ( $hits as $row ) : ?>
 						<tr>
 							<td><strong><?php echo esc_html( AiBots::label( (string) $row['bot'] ) ); ?></strong></td>
+							<td><?php echo esc_html( (string) $row['hits'] ); ?></td>
+							<td><code><?php echo esc_html( (string) $row['last_url'] ); ?></code></td>
+							<td><?php echo esc_html( mysql2date( 'Y-m-d H:i', (string) $row['last_seen'] ) ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+				<?php endif; ?>
+				</tbody>
+			</table>
+
+			<h2><?php esc_html_e( 'AI referral traffic', 'sampoorna-seo' ); ?></h2>
+			<p class="description"><?php esc_html_e( 'Human visits referred from AI answer engines (ChatGPT, Perplexity, Gemini, …).', 'sampoorna-seo' ); ?></p>
+			<table class="widefat striped">
+				<thead><tr>
+					<th><?php esc_html_e( 'Source', 'sampoorna-seo' ); ?></th>
+					<th><?php esc_html_e( 'Visits', 'sampoorna-seo' ); ?></th>
+					<th><?php esc_html_e( 'Last landing URL', 'sampoorna-seo' ); ?></th>
+					<th><?php esc_html_e( 'Last seen', 'sampoorna-seo' ); ?></th>
+				</tr></thead>
+				<tbody>
+				<?php if ( empty( $referrals ) ) : ?>
+					<tr><td colspan="4"><?php esc_html_e( 'No AI-referred visits logged yet.', 'sampoorna-seo' ); ?></td></tr>
+				<?php else : ?>
+					<?php foreach ( $referrals as $row ) : ?>
+						<tr>
+							<td><strong><?php echo esc_html( AiReferrals::label( (string) $row['source'] ) ); ?></strong></td>
 							<td><?php echo esc_html( (string) $row['hits'] ); ?></td>
 							<td><code><?php echo esc_html( (string) $row['last_url'] ); ?></code></td>
 							<td><?php echo esc_html( mysql2date( 'Y-m-d H:i', (string) $row['last_seen'] ) ); ?></td>

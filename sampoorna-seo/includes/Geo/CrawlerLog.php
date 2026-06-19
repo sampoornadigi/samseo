@@ -60,12 +60,21 @@ class CrawlerLog {
 		if ( is_admin() || wp_doing_cron() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
 			return;
 		}
+		$url = $this->current_url();
+
 		$ua  = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
 		$bot = AiBots::match( $ua );
-		if ( '' === $bot ) {
-			return;
+		if ( '' !== $bot ) {
+			Database::record_ai_hit( $bot, $url );
+			return; // A bot request is not also a human referral.
 		}
-		Database::record_ai_hit( $bot, $this->current_url() );
+
+		// Human visit referred from an AI answer engine.
+		$ref = isset( $_SERVER['HTTP_REFERER'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : '';
+		$src = AiReferrals::match( $ref );
+		if ( '' !== $src ) {
+			Database::record_ai_referral( $src, $url );
+		}
 	}
 
 	/**

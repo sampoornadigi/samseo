@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Database {
 
 	/** Bump when table structure changes so the upgrade routine re-runs dbDelta. */
-	const DB_VERSION     = '4';
+	const DB_VERSION     = '5';
 	const OPT_DB_VERSION = 'sampoorna_seo_db_version';
 
 	/**
@@ -114,6 +114,16 @@ class Database {
 	}
 
 	/**
+	 * Fully-qualified AI-referral log table name.
+	 *
+	 * @return string
+	 */
+	public static function ai_referrals_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'sampoorna_seo_ai_referrals';
+	}
+
+	/**
 	 * Run table creation if the plugin DB version changed. Cheap to call on load.
 	 *
 	 * @return void
@@ -144,6 +154,7 @@ class Database {
 		$not_found       = self::not_found_table();
 		$changes         = self::changes_table();
 		$ai_hits         = self::ai_hits_table();
+		$ai_referrals    = self::ai_referrals_table();
 
 		$sql = array();
 
@@ -291,6 +302,17 @@ class Database {
 			last_seen DATETIME NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY uniq_bot (bot)
+		) {$charset_collate};";
+
+		$sql[] = "CREATE TABLE {$ai_referrals} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			source VARCHAR(64) NOT NULL,
+			hits BIGINT UNSIGNED NOT NULL DEFAULT 0,
+			last_url VARCHAR(512) NOT NULL DEFAULT '',
+			first_seen DATETIME NOT NULL,
+			last_seen DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY uniq_source (source)
 		) {$charset_collate};";
 
 		foreach ( $sql as $stmt ) {
@@ -1052,6 +1074,35 @@ class Database {
 	public static function ai_hits() {
 		global $wpdb;
 		$table = self::ai_hits_table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table from $wpdb->prefix; no dynamic values.
+		$rows = $wpdb->get_results( "SELECT * FROM {$table} ORDER BY last_seen DESC", ARRAY_A );
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
+	 * Record one AI-referral hit (upsert by source key).
+	 *
+	 * @param string $source Source key.
+	 * @param string $url    Landing URL.
+	 * @return void
+	 */
+	public static function record_ai_referral( $source, $url ) {
+		global $wpdb;
+		$table = self::ai_referrals_table();
+		$now   = current_time( 'mysql' );
+		$sql   = "INSERT INTO {$table} (source, hits, last_url, first_seen, last_seen) VALUES (%s, 1, %s, %s, %s) ON DUPLICATE KEY UPDATE hits = hits + 1, last_url = VALUES(last_url), last_seen = VALUES(last_seen)";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Table from $wpdb->prefix; all values bound via prepare().
+		$wpdb->query( $wpdb->prepare( $sql, $source, $url, $now, $now ) );
+	}
+
+	/**
+	 * Fetch the AI-referral log, most-recently-seen first.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function ai_referrals() {
+		global $wpdb;
+		$table = self::ai_referrals_table();
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table from $wpdb->prefix; no dynamic values.
 		$rows = $wpdb->get_results( "SELECT * FROM {$table} ORDER BY last_seen DESC", ARRAY_A );
 		return is_array( $rows ) ? $rows : array();

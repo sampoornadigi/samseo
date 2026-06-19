@@ -128,3 +128,48 @@
     </table>
   <% } %>
 </div>
+
+<div class="card" style="margin-top:18px;">
+  <h2 style="margin:0 0 6px;font-size:15px;">AI citation tracking</h2>
+  <p class="muted" style="margin-top:0;">Track whether AI answer engines mention this site for sample prompts. Detection looks for the domain (<code><%= (function(){ try { return new URL(site.site_url || site.reach_url).host; } catch (e) { return ''; } })() %></code>) or brand in the answer.</p>
+
+  <form method="post" action="/sites/<%= site.id %>/citation/prompt" style="display:flex;gap:8px;max-width:680px;">
+    <input type="text" name="prompt" placeholder="e.g. best SEO agency in Hyderabad" style="flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:5px;">
+    <button class="btn" type="submit">Add prompt</button>
+  </form>
+
+  <% if (prompts && prompts.length > 0) { %>
+    <table style="margin-top:12px;">
+      <thead><tr><th>Tracked prompt</th></tr></thead>
+      <tbody>
+        <% prompts.forEach(function (p) { %><tr><td><%= p.prompt %></td></tr><% }); %>
+      </tbody>
+    </table>
+    <form method="post" action="/sites/<%= site.id %>/citation/run" style="margin-top:10px;">
+      <button class="btn btn--primary" type="submit">Run citation sample</button>
+    </form>
+  <% } else { %>
+    <p class="muted">No prompts yet — add one above.</p>
+  <% } %>
+
+  <% if (citations && citations.length > 0) { %>
+    <h3 style="font-size:14px;margin:18px 0 6px;">Latest results</h3>
+    <table>
+      <thead><tr><th>Prompt</th><th>Cited?</th><th>Model</th><th>Answer snippet</th><th>When</th></tr></thead>
+      <tbody>
+        <% citations.forEach(function (c) { %>
+          <tr>
+            <td><%= c.prompt %></td>
+            <td>
+              <% if (c.cited) { %><span class="pill pill--good">cited</span>
+              <% } else { %><span class="pill pill--bad">no</span><% } %>
+            </td>
+            <td><code><%= c.model %></code></td>
+            <td class="muted"><%= c.snippet %></td>
+            <td class="muted"><%= new Date(c.captured_at).toLocaleString() %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>

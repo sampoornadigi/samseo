@@ -20,4 +20,8 @@ export const config = {
   vaultKey: required('CP_VAULT_KEY'),
   /** Allowed signing clock skew in seconds (matches Handshake::MAX_SKEW). */
   skewSeconds: Number(process.env.SKEW_SECONDS ?? 300),
+  /** Anthropic API key for the citation sampler; empty = use the deterministic stub. */
+  llmKey: process.env.CP_LLM_KEY ?? '',
+  /** Model for the citation sampler. */
+  llmModel: process.env.CP_LLM_MODEL ?? 'claude-haiku-4-5',
 } as const;

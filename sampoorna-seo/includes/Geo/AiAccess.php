@@ -35,6 +35,7 @@ class AiAccess {
 			$output = "User-agent: *\nDisallow: /\n";
 		}
 		/** This filter is documented in wp-includes/functions.php (do_robots). */
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Re-applying WordPress core's robots_txt filter to compute the effective body.
 		return (string) apply_filters( 'robots_txt', $output, $public );
 	}
 

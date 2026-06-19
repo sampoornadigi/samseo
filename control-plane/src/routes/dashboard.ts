@@ -18,6 +18,18 @@ import {
   saveAudit,
   setRolledBack,
 } from '../repo/pipeline.js';
+import { addPrompt, latestResults, listPrompts, recordResults } from '../repo/citation.js';
+import { makeLlmClient } from '../llm/client.js';
+import { sample } from '../citation/sampler.js';
+
+/** The site's domain host for citation detection. */
+function siteHost(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return '';
+  }
+}
 
 interface EnrollForm {
   label?: string;
@@ -48,6 +60,8 @@ export function registerDashboard(app: FastifyInstance): void {
     const count = await snapshotCount(id);
     const audit = await latestAudit(id);
     const deployments = await listDeployments(id);
+    const prompts = await listPrompts(id);
+    const citations = await latestResults(id);
     return reply.view('site-detail.ejs', {
       title: site.label || site.site_url,
       site,
@@ -55,6 +69,8 @@ export function registerDashboard(app: FastifyInstance): void {
       count,
       audit,
       deployments,
+      prompts,
+      citations,
     });
   });
 
@@ -182,4 +198,39 @@ export function registerDashboard(app: FastifyInstance): void {
       return reply.redirect(`/sites/${site.id}`);
     },
   );
+
+  // --- Citation tracking (QUEST-style prototype) ---
+
+  app.post(
+    '/sites/:id/citation/prompt',
+    async (request: FastifyRequest<{ Params: { id: string }; Body: { prompt?: string } }>, reply) => {
+      const id = Number(request.params.id);
+      const site = Number.isFinite(id) ? await getById(id) : null;
+      if (!site) {
+        return reply.code(404).send({ error: 'site not found' });
+      }
+      const prompt = (request.body?.prompt ?? '').trim();
+      if (prompt !== '') {
+        await addPrompt(site.id, prompt);
+      }
+      return reply.redirect(`/sites/${site.id}`);
+    },
+  );
+
+  app.post('/sites/:id/citation/run', async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
+    const id = Number(request.params.id);
+    const site = Number.isFinite(id) ? await getById(id) : null;
+    if (!site) {
+      return reply.code(404).send({ error: 'site not found' });
+    }
+    const prompts = await listPrompts(id);
+    if (prompts.length > 0) {
+      const results = await sample(makeLlmClient(), prompts, {
+        domain: siteHost(site.site_url || site.reach_url),
+        brand: site.label,
+      });
+      await recordResults(site.id, results);
+    }
+    return reply.redirect(`/sites/${site.id}`);
+  });
 }
