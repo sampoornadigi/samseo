@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= (site.label || site.site_url || 'Site') %> — SEO Health Report</title>
+  <style>
+    :root { --ink:#1d2327; --muted:#646970; --line:#dcdcde; --good:#1a7f37; --ok:#bf8700; --bad:#b42318; --accent:<%= brand.accent %>; }
+    * { box-sizing:border-box; }
+    body { margin:0; font:14px/1.55 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:#fff; }
+    .sheet { max-width:820px; margin:0 auto; padding:32px 36px; }
+    .rhead { display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid var(--accent); padding-bottom:14px; margin-bottom:22px; }
+    .rhead .brand { font-size:18px; font-weight:700; color:var(--accent); }
+    .rhead .brand img { height:30px; vertical-align:middle; }
+    .rhead .kind { text-align:right; color:var(--muted); font-size:12px; }
+    h1 { font-size:20px; margin:0 0 2px; }
+    h2 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:26px 0 10px; }
+    .sub { color:var(--muted); margin:0 0 4px; }
+    .overall { display:flex; align-items:center; gap:18px; margin:18px 0 6px; }
+    .score-badge { width:84px; height:84px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:700; color:#fff; }
+    .dims { display:grid; grid-template-columns:1fr 1fr; gap:10px 22px; }
+    .dim { }
+    .dim .lbl { display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px; }
+    .bar { height:8px; background:#eee; border-radius:6px; overflow:hidden; }
+    .bar > span { display:block; height:100%; }
+    .g { background:var(--good); } .o { background:var(--ok); } .b { background:var(--bad); }
+    .cg { color:var(--good); } .co { color:var(--ok); } .cb { color:var(--bad); }
+    table { width:100%; border-collapse:collapse; }
+    th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); font-size:13px; }
+    th { color:var(--muted); font-weight:600; }
+    .muted { color:var(--muted); }
+    .toolbar { max-width:820px; margin:14px auto 0; padding:0 36px; }
+    .btn { display:inline-block; padding:7px 14px; border-radius:6px; background:var(--accent); color:#fff; border:0; cursor:pointer; font:inherit; text-decoration:none; }
+    footer { margin-top:30px; padding-top:12px; border-top:1px solid var(--line); color:var(--muted); font-size:11px; }
+    @media print { .toolbar { display:none; } .sheet { padding:0; } body { font-size:12px; } }
+  </style>
+</head>
+<body>
+  <div class="toolbar"><button class="btn" onclick="window.print()">Print / Save as PDF</button></div>
+  <div class="sheet">
+    <%
+      function band(v){ return v == null ? '' : (v >= 70 ? 'g' : (v >= 40 ? 'o' : 'b')); }
+      function cband(v){ return v == null ? 'muted' : (v >= 70 ? 'cg' : (v >= 40 ? 'co' : 'cb')); }
+      var scores = latest ? latest.scores : null;
+      var sig = latest ? latest.signals : null;
+      var overall = scores ? scores.overall : null;
+      var dims = [['Content','content'],['Technical','technical'],['Authority','authority'],['GEO / AI','geo'],['UX','ux']];
+    %>
+    <div class="rhead">
+      <div class="brand">
+        <% if (brand.logo) { %><img src="<%= brand.logo %>" alt="<%= brand.name %>"><% } else { %><%= brand.name %><% } %>
+      </div>
+      <div class="kind">SEO Health Report<br><%= generatedAt %></div>
+    </div>
+
+    <h1><%= site.label || site.site_url || site.key_id %></h1>
+    <p class="sub"><%= site.site_url || site.reach_url %></p>
+
+    <div class="overall">
+      <div class="score-badge <%= band(overall) || 'b' %>" style="background:<%= overall == null ? '#999' : '' %>">
+        <%= overall == null ? '—' : overall %>
+      </div>
+      <div>
+        <strong style="font-size:16px;">Overall health <%= overall == null ? '' : '(' + overall + '/100)' %></strong>
+        <div class="muted"><%= overall == null ? 'No metrics collected yet for this site.' : 'Average of the scored dimensions below.' %></div>
+      </div>
+    </div>
+
+    <% if (scores) { %>
+    <h2>Health dimensions</h2>
+    <div class="dims">
+      <% dims.forEach(function(d){ var v = scores[d[1]]; %>
+        <div class="dim">
+          <div class="lbl"><span><%= d[0] %></span><span class="<%= cband(v) %>"><%= v == null ? 'No data' : v %></span></div>
+          <div class="bar"><span class="<%= band(v) %>" style="width:<%= v == null ? 0 : v %>%"></span></div>
+        </div>
+      <% }); %>
+    </div>
+    <% } %>
+
+    <% if (sig) { %>
+    <h2>Key signals</h2>
+    <table>
+      <tr><th>Published content</th><td><%= sig.content.published %> posts/pages</td></tr>
+      <tr><th>Missing titles / descriptions</th><td><%= sig.content.missing_title %> / <%= sig.content.missing_desc %></td></tr>
+      <tr><th>Avg on-page / readability / AEO</th><td><%= sig.content.avg_onpage ?? '—' %> / <%= sig.content.avg_readability ?? '—' %> / <%= sig.content.avg_aeo ?? '—' %></td></tr>
+      <tr><th>Sitemap / robots / IndexNow</th><td><%= sig.technical.sitemap_cached ? 'yes' : 'no' %> / <%= sig.technical.robots_configured ? 'yes' : 'no' %> / <%= sig.technical.indexnow_enabled ? 'yes' : 'no' %></td></tr>
+      <tr><th>New 404s / active redirects</th><td><%= sig.technical.not_found_new %> / <%= sig.technical.redirects_active %></td></tr>
+      <tr><th>Search Console</th><td><%= sig.authority.gsc_connected ? ('connected — ' + (sig.authority.clicks_28d ?? 0) + ' clicks, ' + (sig.authority.impressions_28d ?? 0) + ' impressions (28d)') : 'not connected' %></td></tr>
+      <tr><th>GEO / AI readiness</th><td>org <%= sig.geo.org_name_set ? 'set' : 'unset' %>, <%= sig.geo.social_count %> social, local business <%= sig.geo.local_business ? 'yes' : 'no' %></td></tr>
+    </table>
+    <% } %>
+
+    <h2>Audit findings <% if (audit) { %>(<%= audit.findings.length %>)<% } %></h2>
+    <% if (!audit || audit.findings.length === 0) { %>
+      <p class="muted">No outstanding findings<%= audit ? '' : ' (no audit has been run yet)' %>.</p>
+    <% } else { %>
+      <table>
+        <tr><th>Item</th><th>Field</th><th>Issue</th></tr>
+        <% audit.findings.slice(0, 25).forEach(function(f){ %>
+          <tr><td><%= f.label %></td><td><%= f.field %></td><td><%= f.reason %></td></tr>
+        <% }); %>
+      </table>
+      <% if (audit.findings.length > 25) { %><p class="muted"><%= audit.findings.length - 25 %> more not shown.</p><% } %>
+    <% } %>
+
+    <footer>Generated by <%= brand.name %> · <%= generatedAt %><% if (brand.supportUrl) { %> · <%= brand.supportUrl %><% } %></footer>
+  </div>
+</body>
+</html>
