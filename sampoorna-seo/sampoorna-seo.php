@@ -90,6 +90,7 @@ function sampoorna_seo_init() {
 	// Schema (Phase 2): connected JSON-LD @graph (front-end) + extra node types.
 	\Sampoorna\SEO\Schema\Graph::instance();
 	\Sampoorna\SEO\Schema\Faq::instance();
+	\Sampoorna\SEO\Schema\HowTo::instance();
 	\Sampoorna\SEO\Schema\Product::instance();
 	\Sampoorna\SEO\Schema\LocalBusiness::instance();
 

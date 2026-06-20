@@ -6,10 +6,36 @@
  */
 
 use Sampoorna\SEO\Schema\Faq;
+use Sampoorna\SEO\Schema\HowTo;
 use Sampoorna\SEO\Schema\Product;
 use Sampoorna\SEO\Schema\LocalBusiness;
 
 class Sampoorna_Seo_Schema_Types_Test extends WP_UnitTestCase {
+
+	/* ---------- HowTo ---------- */
+
+	public function test_howto_node_built_from_ordered_steps() {
+		$content = "<p>Intro.</p>\n<ol>\n<li>Open the settings page.</li>\n<li>Paste your key.</li>\n<li>Click save.</li>\n</ol>";
+		$node    = HowTo::howto_node( 'How to connect your site', $content, 'https://example.com/connect/' );
+
+		$this->assertSame( 'HowTo', $node['@type'] );
+		$this->assertSame( 'https://example.com/connect/#howto', $node['@id'] );
+		$this->assertSame( 'How to connect your site', $node['name'] );
+		$this->assertCount( 3, $node['step'] );
+		$this->assertSame( 'HowToStep', $node['step'][0]['@type'] );
+		$this->assertSame( 1, $node['step'][0]['position'] );
+		$this->assertStringContainsString( 'settings page', $node['step'][0]['text'] );
+	}
+
+	public function test_howto_node_empty_when_title_is_not_a_how_to() {
+		$content = '<ol><li>Step one.</li><li>Step two.</li></ol>';
+		$this->assertSame( array(), HowTo::howto_node( 'Our company history', $content, 'https://example.com/x/' ) );
+	}
+
+	public function test_howto_node_empty_without_enough_steps() {
+		$content = '<ol><li>Only one step.</li></ol>';
+		$this->assertSame( array(), HowTo::howto_node( 'How to do it', $content, 'https://example.com/x/' ) );
+	}
 
 	/* ---------- FAQ ---------- */
 
