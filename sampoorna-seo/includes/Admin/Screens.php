@@ -22,6 +22,7 @@ use Sampoorna\SEO\Ai\AiClient;
 use Sampoorna\SEO\Technical\Robots;
 use Sampoorna\SEO\Technical\IndexNow;
 use Sampoorna\SEO\Technical\IndexingApi;
+use Sampoorna\SEO\Technical\BingSubmit;
 use Sampoorna\SEO\Schema\Graph;
 use Sampoorna\SEO\Schema\LocalBusiness;
 use Sampoorna\SEO\Geo\LlmsTxt;
@@ -168,6 +169,13 @@ class Screens {
 		// Only replace when fresh, valid JSON is pasted; the masked placeholder is not valid JSON, so it is ignored.
 		if ( '' !== $gsa && is_array( json_decode( $gsa, true ) ) ) {
 			update_option( IndexingApi::OPT_KEY, Crypto::encrypt( $gsa ), false );
+		}
+
+		update_option( BingSubmit::OPT_ENABLED, isset( $_POST['sampoorna_seo_bing_enabled'] ) ? 1 : 0 );
+		$bing_key = isset( $_POST['sampoorna_seo_bing_apikey'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['sampoorna_seo_bing_apikey'] ) ) ) : '';
+		// Only replace when a real key is pasted (the field shows a masked placeholder otherwise).
+		if ( '' !== $bing_key && false === strpos( $bing_key, "\xe2\x80\xa2" ) ) {
+			update_option( BingSubmit::OPT_KEY, Crypto::encrypt( $bing_key ), false );
 		}
 
 		// GEO / AI visibility: llms.txt enable + intro.
@@ -759,6 +767,22 @@ class Screens {
 									<?php esc_html_e( 'Paste the service-account JSON key (stored encrypted). Google officially supports the Indexing API only for pages with JobPosting or BroadcastEvent structured data; submission is on demand, not automatic.', 'sampoorna-seo' ); ?>
 								</p>
 								<textarea name="sampoorna_seo_gindexing_sa" rows="4" class="large-text code" placeholder='{ "type": "service_account", "client_email": "…", "private_key": "…" }'><?php echo '' !== Crypto::decrypt( get_option( IndexingApi::OPT_KEY, '' ) ) ? esc_textarea( '••• stored — paste again to replace •••' ) : ''; ?></textarea>
+							</td>
+						</tr>
+					</table>
+
+					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Bing Webmaster', 'sampoorna-seo' ); ?></th>
+							<td>
+								<label>
+									<input name="sampoorna_seo_bing_enabled" type="checkbox" value="1" <?php checked( BingSubmit::enabled() ); ?>>
+									<?php esc_html_e( 'Auto-submit new and updated URLs to Bing on publish.', 'sampoorna-seo' ); ?>
+								</label>
+								<p class="description">
+									<?php esc_html_e( 'API key from Bing Webmaster Tools → Settings → API access (stored encrypted).', 'sampoorna-seo' ); ?>
+								</p>
+								<input name="sampoorna_seo_bing_apikey" type="text" class="regular-text" autocomplete="off" value="<?php echo '' !== BingSubmit::api_key() ? esc_attr( '••••••••' ) : ''; ?>">
 							</td>
 						</tr>
 					</table>

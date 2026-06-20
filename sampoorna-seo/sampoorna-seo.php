@@ -82,6 +82,7 @@ function sampoorna_seo_init() {
 	\Sampoorna\SEO\Technical\Robots::instance();
 	\Sampoorna\SEO\Technical\Hreflang::instance();
 	\Sampoorna\SEO\Technical\IndexNow::instance();
+	\Sampoorna\SEO\Technical\BingSubmit::instance();
 
 	// GEO / AI visibility (Phase 5): llms.txt / llms-full.txt + AI-crawler logging.
 	\Sampoorna\SEO\Geo\LlmsTxt::instance();
