@@ -88,6 +88,14 @@
       <tr><th>New 404s / active redirects</th><td><%= sig.technical.not_found_new %> / <%= sig.technical.redirects_active %></td></tr>
       <tr><th>Search Console</th><td><%= sig.authority.gsc_connected ? ('connected — ' + (sig.authority.clicks_28d ?? 0) + ' clicks, ' + (sig.authority.impressions_28d ?? 0) + ' impressions (28d)') : 'not connected' %></td></tr>
       <tr><th>GEO / AI readiness</th><td>org <%= sig.geo.org_name_set ? 'set' : 'unset' %>, <%= sig.geo.social_count %> social, local business <%= sig.geo.local_business ? 'yes' : 'no' %></td></tr>
+      <% if (sig.ux && (sig.ux.lcp_ms != null || sig.ux.perf != null)) { %>
+      <tr><th>Core Web Vitals (<%= sig.ux.source || '' %>)</th><td>
+        <% if (sig.ux.lcp_ms != null) { %>LCP <%= (sig.ux.lcp_ms/1000).toFixed(2) %>s<% } %>
+        <% if (sig.ux.inp_ms != null) { %> · INP <%= sig.ux.inp_ms %>ms<% } %>
+        <% if (sig.ux.cls != null) { %> · CLS <%= sig.ux.cls.toFixed(2) %><% } %>
+        <% if (sig.ux.perf != null) { %>Lighthouse perf <%= Math.round(sig.ux.perf*100) %><% } %>
+      </td></tr>
+      <% } %>
     </table>
     <% } %>
 

@@ -41,9 +41,32 @@ function baseSignals(over: Partial<Signals> = {}): Signals {
 }
 
 describe('scorer', () => {
-  it('UX is always null and excluded from overall', () => {
+  it('UX is null when no PageSpeed score is supplied', () => {
     const s = score(baseSignals());
     expect(s.ux).toBeNull();
+  });
+
+  it('UX reflects an injected PageSpeed score and joins the overall', () => {
+    const signals = baseSignals({
+      content: {
+        published: 1,
+        missing_title: 0,
+        missing_desc: 0,
+        missing_focus: 0,
+        sample_size: 1,
+        avg_onpage: 100,
+        avg_readability: 100,
+        avg_aeo: 100,
+      },
+    });
+    const s = score(signals, 60);
+    expect(s.ux).toBe(60);
+    // ux now joins the overall mean of the non-null dimensions.
+    const present = [s.content, s.technical, s.authority, s.geo, s.ux].filter(
+      (v): v is number => v !== null,
+    );
+    expect(present).toContain(60);
+    expect(s.overall).toBe(Math.round(present.reduce((a, b) => a + b, 0) / present.length));
   });
 
   it('authority is null when GSC is not connected', () => {

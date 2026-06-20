@@ -46,7 +46,15 @@ export interface Signals {
     local_business: boolean;
     avg_aeo: number | null;
   };
-  ux: { available: boolean; mobile_issues: number | null };
+  ux: {
+    available: boolean;
+    mobile_issues: number | null;
+    lcp_ms?: number | null;
+    inp_ms?: number | null;
+    cls?: number | null;
+    perf?: number | null;
+    source?: 'field' | 'lab';
+  };
 }
 
 export interface Scores {
@@ -146,12 +154,18 @@ function geoScore(g: Signals['geo']): number | null {
   return weighted(checks);
 }
 
-export function score(signals: Signals): Scores {
+/**
+ * Score raw signals into the 5 dimensions + overall.
+ *
+ * @param uxScore Externally-sourced UX/CWV score (PageSpeed Insights, fetched
+ *                on the plane); null when no PageSpeed key is configured.
+ */
+export function score(signals: Signals, uxScore: number | null = null): Scores {
   const content = contentScore(signals.content);
   const technical = technicalScore(signals.technical);
   const authority = authorityScore(signals.authority);
   const geo = geoScore(signals.geo);
-  const ux = null; // No Core Web Vitals / field-data source yet.
+  const ux = uxScore; // From PageSpeed Insights (control-plane fetch); null = not scored.
 
   const present = [content, technical, authority, geo, ux].filter(
     (v): v is number => v !== null,

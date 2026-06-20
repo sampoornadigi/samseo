@@ -8,6 +8,8 @@ import { applyDescriptor, list, secretFor, type Site } from '../repo/sites.js';
 import { pullMetrics, pullStatus } from '../client/siteClient.js';
 import { score } from '../score/scorer.js';
 import { insertSnapshot } from '../repo/metrics.js';
+import { fetchUxScore } from './pagespeed.js';
+import { config } from '../config.js';
 import { maybeAlert } from './alerts.js';
 
 /** Refresh one site (descriptor + scored metrics snapshot). */
@@ -24,9 +26,20 @@ export async function refreshSite(site: Site, secret: string): Promise<{ status:
 
   const m = await pullMetrics(site, secret);
   if (m.ok && m.signals) {
-    const scored = score(m.signals);
+    const signals = m.signals;
+    // UX/CWV from PageSpeed Insights (only when a key is configured); the key
+    // stays on the plane, never on the site. Best-effort — null leaves UX unscored.
+    let uxScore: number | null = null;
+    if (config.pagespeedKey !== '') {
+      const ux = await fetchUxScore(site.site_url || site.reach_url, config.pagespeedKey, config.pagespeedStrategy);
+      uxScore = ux.score;
+      if (ux.metrics) {
+        signals.ux = { ...signals.ux, available: true, ...ux.metrics };
+      }
+    }
+    const scored = score(signals, uxScore);
     overall = scored.overall;
-    await insertSnapshot(site.id, m.signals, scored);
+    await insertSnapshot(site.id, signals, scored);
     metrics = true;
   }
 

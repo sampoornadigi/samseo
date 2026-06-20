@@ -32,4 +32,8 @@ export const config = {
   adminPassword: process.env.CP_ADMIN_PASSWORD ?? '',
   /** Minutes between scheduled metric refreshes of all sites; 0 disables. */
   refreshMinutes: Number(process.env.CP_REFRESH_MINUTES ?? 0),
+  /** Google PageSpeed Insights API key for the UX/CWV score; empty disables UX scoring. */
+  pagespeedKey: process.env.CP_PAGESPEED_KEY ?? '',
+  /** PageSpeed strategy: 'mobile' (default) or 'desktop'. */
+  pagespeedStrategy: process.env.CP_PAGESPEED_STRATEGY ?? 'mobile',
 } as const;
