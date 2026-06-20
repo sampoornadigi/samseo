@@ -6,8 +6,8 @@
  * Yandex, …) on publish, authenticated by a public key file served from the
  * site root. Submission is fire-and-forget so saves are never slowed.
  *
- * (The Google Indexing API is intentionally not built — it officially accepts
- * only JobPosting/BroadcastEvent URLs and ignores general pages.)
+ * (The Google Indexing API — officially scoped to JobPosting/BroadcastEvent
+ * pages — is a separate, on-demand module: see Technical\IndexingApi.)
  *
  * @package Sampoorna\SEO
  */

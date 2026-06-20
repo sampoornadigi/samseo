@@ -21,6 +21,7 @@ use Sampoorna\SEO\ControlPlane\Handshake;
 use Sampoorna\SEO\Ai\AiClient;
 use Sampoorna\SEO\Technical\Robots;
 use Sampoorna\SEO\Technical\IndexNow;
+use Sampoorna\SEO\Technical\IndexingApi;
 use Sampoorna\SEO\Schema\Graph;
 use Sampoorna\SEO\Schema\LocalBusiness;
 use Sampoorna\SEO\Geo\LlmsTxt;
@@ -161,6 +162,13 @@ class Screens {
 		update_option( Robots::OPT_BODY, $robots );
 		update_option( IndexNow::OPT_ENABLED, isset( $_POST['sampoorna_seo_indexnow_enabled'] ) ? 1 : 0 );
 		IndexNow::ensure_key();
+
+		update_option( IndexingApi::OPT_ENABLED, isset( $_POST['sampoorna_seo_gindexing_enabled'] ) ? 1 : 0 );
+		$gsa = isset( $_POST['sampoorna_seo_gindexing_sa'] ) ? trim( sanitize_textarea_field( wp_unslash( $_POST['sampoorna_seo_gindexing_sa'] ) ) ) : '';
+		// Only replace when fresh, valid JSON is pasted; the masked placeholder is not valid JSON, so it is ignored.
+		if ( '' !== $gsa && is_array( json_decode( $gsa, true ) ) ) {
+			update_option( IndexingApi::OPT_KEY, Crypto::encrypt( $gsa ), false );
+		}
 
 		// GEO / AI visibility: llms.txt enable + intro.
 		update_option( LlmsTxt::OPT_ENABLED, isset( $_POST['sampoorna_seo_llms_enabled'] ) ? 1 : 0 );
@@ -739,7 +747,23 @@ class Screens {
 					</tr>
 				</table>
 
-				<h2><?php esc_html_e( 'GEO / AI visibility', 'sampoorna-seo' ); ?></h2>
+				<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Google Indexing API', 'sampoorna-seo' ); ?></th>
+							<td>
+								<label>
+									<input name="sampoorna_seo_gindexing_enabled" type="checkbox" value="1" <?php checked( (bool) get_option( IndexingApi::OPT_ENABLED, false ) ); ?>>
+									<?php esc_html_e( 'Enable on-demand URL submission to the Google Indexing API.', 'sampoorna-seo' ); ?>
+								</label>
+								<p class="description">
+									<?php esc_html_e( 'Paste the service-account JSON key (stored encrypted). Google officially supports the Indexing API only for pages with JobPosting or BroadcastEvent structured data; submission is on demand, not automatic.', 'sampoorna-seo' ); ?>
+								</p>
+								<textarea name="sampoorna_seo_gindexing_sa" rows="4" class="large-text code" placeholder='{ "type": "service_account", "client_email": "…", "private_key": "…" }'><?php echo '' !== Crypto::decrypt( get_option( IndexingApi::OPT_KEY, '' ) ) ? esc_textarea( '••• stored — paste again to replace •••' ) : ''; ?></textarea>
+							</td>
+						</tr>
+					</table>
+
+					<h2><?php esc_html_e( 'GEO / AI visibility', 'sampoorna-seo' ); ?></h2>
 				<table class="form-table" role="presentation">
 					<tr>
 						<th scope="row"><?php esc_html_e( 'llms.txt', 'sampoorna-seo' ); ?></th>
