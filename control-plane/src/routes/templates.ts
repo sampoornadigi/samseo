@@ -59,6 +59,10 @@ function settingsFromForm(body: Record<string, unknown>): Record<string, string>
 
 export function registerTemplates(app: FastifyInstance): void {
   app.get('/templates', async (request, reply) => {
+    const me = readSession(request);
+    if (!me || me.role === 'client') {
+      return reply.code(403).send('Forbidden');
+    }
     const templates = await listTemplates();
     const sites = await listSites();
     return reply.view('templates.ejs', {

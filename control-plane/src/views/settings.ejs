@@ -1,0 +1,26 @@
+<div class="card">
+  <h2 style="margin:0 0 14px;font-size:15px;">White-label &amp; alerts</h2>
+  <% if (saved) { %><div style="background:#edf7ed;border:1px solid var(--good);color:var(--good);padding:8px 12px;border-radius:6px;margin-bottom:14px;">Settings saved.</div><% } %>
+
+  <form method="post" action="/settings">
+    <h3 style="margin:6px 0;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">Branding</h3>
+    <label>Brand name (header &amp; titles)</label>
+    <input type="text" name="brand_name" value="<%= settings.brand_name %>">
+    <label>Logo URL (optional — shown in the header instead of the name)</label>
+    <input type="text" name="brand_logo" value="<%= settings.brand_logo %>" placeholder="https://…/logo.svg">
+    <label>Accent colour</label>
+    <input type="text" name="brand_accent" value="<%= settings.brand_accent %>" placeholder="#2271b1">
+    <label>Support URL (optional — footer link)</label>
+    <input type="text" name="support_url" value="<%= settings.support_url %>" placeholder="https://…">
+
+    <h3 style="margin:18px 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">Alerts</h3>
+    <label>Webhook URL (Slack / Discord / generic — leave blank to disable)</label>
+    <input type="text" name="alert_webhook" value="<%= settings.alert_webhook %>" placeholder="https://hooks.slack.com/services/…">
+    <label>Health alert threshold (0–100): alert when a site's overall score drops below this, or it is unreachable</label>
+    <input type="text" name="alert_threshold" value="<%= settings.alert_threshold %>">
+
+    <div style="margin-top:16px;">
+      <button class="btn btn--primary" type="submit">Save settings</button>
+    </div>
+  </form>
+</div>

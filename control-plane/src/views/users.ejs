@@ -1,31 +1,59 @@
 <div class="card">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-    <h2 style="margin:0;font-size:15px;">Operators</h2>
+    <h2 style="margin:0;font-size:15px;">Operators &amp; clients</h2>
     <a class="btn" href="/">&larr; Sites</a>
   </div>
 
   <table>
-    <thead><tr><th>Username</th><th>Role</th><th>Created</th></tr></thead>
+    <thead><tr><th>Username</th><th>Role</th><th>Scope</th><th>Created</th></tr></thead>
     <tbody>
-      <% users.forEach(function (u) { %>
+      <% users.forEach(function (u) {
+           var assigned = (assignments.get ? assignments.get(u.id) : assignments[u.id]) || [];
+      %>
         <tr>
           <td><strong><%= u.username %></strong></td>
           <td><%= u.role %></td>
+          <td class="muted">
+            <% if (u.role === 'client') { %><%= assigned.length %> site<%= assigned.length === 1 ? '' : 's' %><% } else { %>all sites<% } %>
+          </td>
           <td class="muted"><%= new Date(u.created_at).toLocaleString() %></td>
         </tr>
       <% }); %>
     </tbody>
   </table>
 
-  <h3 style="font-size:14px;margin:18px 0 6px;">Add operator</h3>
+  <h3 style="font-size:14px;margin:18px 0 6px;">Add user</h3>
+  <p class="muted" style="margin-top:0;">Roles: <strong>admin</strong> (full control), <strong>viewer</strong> (read-only, all sites), <strong>client</strong> (read-only, only the sites you select below).</p>
   <% if (error) { %><div class="err"><%= error %></div><% } %>
-  <form method="post" action="/users" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;max-width:680px;">
-    <input type="text" name="username" placeholder="username" style="padding:8px 10px;border:1px solid var(--line);border-radius:5px;">
-    <input type="password" name="password" placeholder="password (min 8 chars)" style="padding:8px 10px;border:1px solid var(--line);border-radius:5px;">
-    <select name="role" style="padding:8px 10px;border:1px solid var(--line);border-radius:5px;">
-      <option value="viewer">viewer (read-only)</option>
-      <option value="admin">admin (full)</option>
-    </select>
-    <button class="btn btn--primary" type="submit">Add</button>
+  <form method="post" action="/users" style="max-width:680px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <input type="text" name="username" placeholder="username" style="padding:8px 10px;border:1px solid var(--line);border-radius:5px;">
+      <input type="password" name="password" placeholder="password (min 8 chars)" style="padding:8px 10px;border:1px solid var(--line);border-radius:5px;">
+      <select name="role" id="role-select" style="padding:8px 10px;border:1px solid var(--line);border-radius:5px;">
+        <option value="viewer">viewer (read-only)</option>
+        <option value="admin">admin (full)</option>
+        <option value="client">client (scoped)</option>
+      </select>
+      <button class="btn btn--primary" type="submit">Add</button>
+    </div>
+    <div id="client-sites" style="display:none;margin-top:10px;padding:10px 12px;background:#f6f7f7;border:1px solid var(--line);border-radius:6px;">
+      <strong style="font-size:13px;">Client can see:</strong>
+      <% if (sites.length === 0) { %>
+        <span class="muted"> no sites enrolled yet</span>
+      <% } else { %>
+        <% sites.forEach(function (s) { %>
+          <label style="font-weight:400;margin:2px 0;"><input type="checkbox" name="sites" value="<%= s.id %>"> <%= s.label || s.site_url || s.key_id %></label>
+        <% }); %>
+      <% } %>
+    </div>
   </form>
+  <script>
+    (function () {
+      var sel = document.getElementById('role-select');
+      var box = document.getElementById('client-sites');
+      if (sel && box) {
+        sel.addEventListener('change', function () { box.style.display = sel.value === 'client' ? 'block' : 'none'; });
+      }
+    })();
+  </script>
 </div>

@@ -16,7 +16,9 @@ import { config } from './config.js';
 import { registerAnnounce } from './routes/announce.js';
 import { registerDashboard } from './routes/dashboard.js';
 import { registerTemplates } from './routes/templates.js';
+import { registerSettings } from './routes/settings.js';
 import { registerAuth, seedAdmin } from './routes/auth.js';
+import { getBranding } from './repo/settings.js';
 import { readSession } from './auth/session.js';
 import { startScheduler } from './scheduler.js';
 
@@ -70,11 +72,17 @@ export async function build() {
     }
   });
 
+  // Inject white-label branding into every rendered view (cached after first read).
+  app.addHook('preHandler', async (_request, reply) => {
+    reply.locals = { ...(reply.locals ?? {}), brand: await getBranding() };
+  });
+
   app.get('/healthz', async () => ({ ok: true }));
   registerAuth(app);
   registerAnnounce(app);
   registerDashboard(app);
   registerTemplates(app);
+  registerSettings(app);
 
   await seedAdmin(app.log);
   startScheduler(app.log);

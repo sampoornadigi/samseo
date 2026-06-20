@@ -1,17 +1,21 @@
 <div class="card">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
     <h2 style="margin:0;font-size:15px;">Enrolled sites (<%= sites.length %>)</h2>
+    <% var isAdmin = (typeof user !== 'undefined' && user && user.role === 'admin'); %>
+    <% if (isAdmin) { %>
     <span>
       <% if (sites.length > 0) { %>
         <form class="inline" method="post" action="/refresh-all" style="display:inline;"><button class="btn" type="submit">Refresh all</button></form>
       <% } %>
       <a class="btn btn--primary" href="/sites/new">Enroll a site</a>
     </span>
+    <% } %>
   </div>
 
   <% if (sites.length === 0) { %>
     <p class="muted">No sites yet. Enroll one by pasting its key id and secret from the WordPress “Control plane” settings.</p>
   <% } else { %>
+    <% if (isAdmin) { %>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:10px 12px;background:#f6f7f7;border:1px solid var(--line);border-radius:6px;">
       <form id="bulkform" method="post" action="/bulk" style="display:flex;align-items:center;gap:8px;margin:0;flex-wrap:wrap;">
         <strong style="font-size:13px;">Bulk action:</strong>
@@ -26,11 +30,12 @@
         <button class="btn" type="submit" name="all" value="1" onclick="return confirm('Run this action on ALL enrolled sites?');">Run on all</button>
       </form>
     </div>
+    <% } %>
     <table>
       <thead>
         <tr>
-          <th><input type="checkbox" id="bulk-all"></th>
-          <th>Site</th><th>Health</th><th>Status</th><th>Plugin</th><th>WP</th><th>GSC</th><th>Last seen</th><th></th>
+          <% if (isAdmin) { %><th><input type="checkbox" id="bulk-all"></th><% } %>
+          <th>Site</th><th>Health</th><th>Status</th><th>Plugin</th><th>WP</th><th>GSC</th><th>Last seen</th><% if (isAdmin) { %><th></th><% } %>
         </tr>
       </thead>
       <tbody>
@@ -44,7 +49,7 @@
         <% var overall = health[s.id];
            var hb = overall == null ? null : (overall >= 80 ? 'good' : (overall >= 50 ? 'ok' : 'bad')); %>
         <tr>
-          <td><input class="bulk-cb" type="checkbox" form="bulkform" name="sites" value="<%= s.id %>"></td>
+          <% if (isAdmin) { %><td><input class="bulk-cb" type="checkbox" form="bulkform" name="sites" value="<%= s.id %>"></td><% } %>
           <td>
             <strong><a href="/sites/<%= s.id %>"><%= s.label || s.site_url || s.key_id %></a></strong><br>
             <span class="muted"><%= s.site_url || s.reach_url %></span><br>
@@ -58,11 +63,13 @@
           <td><%= s.wp_version || '—' %></td>
           <td><%= gsc ? 'yes' : 'no' %></td>
           <td><%= s.last_seen ? new Date(s.last_seen).toLocaleString() : '—' %></td>
+          <% if (isAdmin) { %>
           <td>
             <form class="inline" method="post" action="/sites/<%= s.id %>/refresh">
               <button class="btn" type="submit">Refresh</button>
             </form>
           </td>
+          <% } %>
         </tr>
         <% }); %>
       </tbody>

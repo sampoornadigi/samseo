@@ -18,6 +18,7 @@ import {
   setRolledBack,
 } from '../repo/pipeline.js';
 import { addPrompt, latestResults, listPrompts, recordResults } from '../repo/citation.js';
+import { siteIdsForUsername } from '../repo/users.js';
 import { makeLlmClient } from '../llm/client.js';
 import { sample } from '../citation/sampler.js';
 import { readSession } from '../auth/session.js';
@@ -41,7 +42,12 @@ interface EnrollForm {
 
 export function registerDashboard(app: FastifyInstance): void {
   app.get('/', async (request, reply) => {
-    const sites = await list();
+    const me = readSession(request);
+    let sites = await list();
+    if (me && me.role === 'client') {
+      const allowed = new Set(await siteIdsForUsername(me.username));
+      sites = sites.filter((s) => allowed.has(s.id));
+    }
     const health = await latestOverallBySite();
     const healthBySite: Record<number, number | null> = {};
     for (const s of sites) {
@@ -53,9 +59,16 @@ export function registerDashboard(app: FastifyInstance): void {
 
   app.get('/sites/:id', async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
     const id = Number(request.params.id);
+    const me = readSession(request);
     const site = Number.isFinite(id) ? await getById(id) : null;
     if (!site) {
       return reply.code(404).send({ error: 'site not found' });
+    }
+    if (me && me.role === 'client') {
+      const allowed = new Set(await siteIdsForUsername(me.username));
+      if (!allowed.has(id)) {
+        return reply.code(403).send('Forbidden');
+      }
     }
     const latest = await latestForSite(id);
     const count = await snapshotCount(id);
