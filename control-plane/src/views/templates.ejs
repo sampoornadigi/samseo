@@ -1,0 +1,87 @@
+<div class="card" style="margin-bottom:18px;">
+  <h2 style="margin:0 0 14px;font-size:15px;">Config templates (<%= templates.length %>)</h2>
+
+  <% if (templates.length === 0) { %>
+    <p class="muted">No templates yet. Create a vertical template below, then push it to one or more sites.</p>
+  <% } else { %>
+    <table>
+      <thead>
+        <tr><th>Template</th><th>Settings</th><th>Push to sites</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% templates.forEach(function (t) { %>
+        <tr>
+          <td>
+            <strong><%= t.name %></strong><br>
+            <% if (t.vertical) { %><span class="muted"><%= t.vertical %></span><% } %>
+          </td>
+          <td>
+            <% var keys = Object.keys(t.settings || {}); %>
+            <% if (keys.length === 0) { %><span class="muted">—</span><% } else { %>
+              <% keys.forEach(function (k) { %><div><code><%= k %></code> = <%= String(t.settings[k]).slice(0, 60) %></div><% }); %>
+            <% } %>
+          </td>
+          <td>
+            <% if (sites.length === 0) { %>
+              <span class="muted">No sites enrolled</span>
+            <% } else { %>
+              <form method="post" action="/templates/<%= t.id %>/push">
+                <% sites.forEach(function (s) { %>
+                  <label style="font-weight:400;margin:2px 0;">
+                    <input type="checkbox" name="sites" value="<%= s.id %>"> <%= s.label || s.site_url || s.key_id %>
+                  </label>
+                <% }); %>
+                <div style="margin-top:6px;">
+                  <button class="btn btn--primary" type="submit">Push to selected</button>
+                  <button class="btn" type="submit" name="all" value="1" onclick="return confirm('Push to ALL enrolled sites?');">Push to all</button>
+                </div>
+              </form>
+            <% } %>
+          </td>
+          <td>
+            <form method="post" action="/templates/<%= t.id %>/delete" onsubmit="return confirm('Delete this template?');">
+              <button class="btn" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<div class="card">
+  <h2 style="margin:0 0 8px;font-size:15px;">New template</h2>
+  <p class="muted" style="margin-top:0;">Only the fields you fill in are pushed. Checkboxes are always pushed (on or off) so a template can disable a feature.</p>
+  <form method="post" action="/templates">
+    <label>Name</label>
+    <input type="text" name="name" placeholder="e.g. Healthcare baseline" required>
+    <label>Vertical (optional)</label>
+    <input type="text" name="vertical" placeholder="e.g. healthcare">
+
+    <% fields.forEach(function (f) { %>
+      <% if (f.type === 'bool') { %>
+        <input type="hidden" name="has_<%= f.field %>" value="1">
+        <label style="font-weight:400;margin-top:12px;">
+          <input type="checkbox" name="f_<%= f.field %>" value="1"> <%= f.label %>
+        </label>
+      <% } else if (f.type === 'textarea') { %>
+        <label><%= f.label %></label>
+        <textarea name="f_<%= f.field %>" rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:5px;font:inherit;"></textarea>
+      <% } else if (f.type === 'enum') { %>
+        <label><%= f.label %></label>
+        <select name="f_<%= f.field %>" style="padding:8px 10px;border:1px solid var(--line);border-radius:5px;font:inherit;">
+          <option value="">(leave unset)</option>
+          <% (f.options || []).forEach(function (o) { %><option value="<%= o %>"><%= o %></option><% }); %>
+        </select>
+      <% } else { %>
+        <label><%= f.label %></label>
+        <input type="text" name="f_<%= f.field %>">
+      <% } %>
+    <% }); %>
+
+    <div style="margin-top:14px;">
+      <button class="btn btn--primary" type="submit">Create template</button>
+    </div>
+  </form>
+</div>

@@ -15,6 +15,7 @@ import ejs from 'ejs';
 import { config } from './config.js';
 import { registerAnnounce } from './routes/announce.js';
 import { registerDashboard } from './routes/dashboard.js';
+import { registerTemplates } from './routes/templates.js';
 import { registerAuth, seedAdmin } from './routes/auth.js';
 import { readSession } from './auth/session.js';
 import { startScheduler } from './scheduler.js';
@@ -73,6 +74,7 @@ export async function build() {
   registerAuth(app);
   registerAnnounce(app);
   registerDashboard(app);
+  registerTemplates(app);
 
   await seedAdmin(app.log);
   startScheduler(app.log);

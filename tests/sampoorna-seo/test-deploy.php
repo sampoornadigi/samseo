@@ -134,6 +134,59 @@ class Sampoorna_Seo_Deploy_Test extends WP_UnitTestCase {
 		$this->assertSame( 0, $res['applied'] );
 	}
 
+	/* ---------- Config templating: option-type changes ---------- */
+
+	public function test_apply_writes_option_then_rollback_restores() {
+		update_option( \Sampoorna\SEO\Geo\LlmsTxt::OPT_INTRO, 'Original intro.' );
+
+		$res = Deploy::apply(
+			'd_opt',
+			array(
+				array(
+					'type'  => 'option',
+					'id'    => 0,
+					'field' => 'llms_intro',
+					'value' => 'Vertical template intro.',
+				),
+				array(
+					'type'  => 'option',
+					'id'    => 0,
+					'field' => 'indexnow_enabled',
+					'value' => '1',
+				),
+			)
+		);
+		$this->assertSame( 2, $res['applied'] );
+		$this->assertSame( 'Vertical template intro.', get_option( \Sampoorna\SEO\Geo\LlmsTxt::OPT_INTRO ) );
+		$this->assertSame( '1', \Sampoorna\SEO\ControlPlane\Settings::read( 'indexnow_enabled' ) );
+
+		Deploy::rollback( 'd_opt' );
+		$this->assertSame( 'Original intro.', get_option( \Sampoorna\SEO\Geo\LlmsTxt::OPT_INTRO ) );
+	}
+
+	public function test_apply_rejects_non_allowlisted_option() {
+		$res = Deploy::apply(
+			'd_opt_bad',
+			array(
+				array(
+					'type'  => 'option',
+					'id'    => 0,
+					'field' => 'ai_api_key',
+					'value' => 'secret',
+				),
+			)
+		);
+		$this->assertSame( 0, $res['applied'] );
+		$this->assertSame( '', get_option( 'sampoorna_seo_ai_api_key', '' ) );
+	}
+
+	public function test_option_bool_sanitizes_to_canonical_string() {
+		\Sampoorna\SEO\ControlPlane\Settings::write( 'llms_enabled', 'true' );
+		$this->assertSame( '1', \Sampoorna\SEO\ControlPlane\Settings::read( 'llms_enabled' ) );
+		\Sampoorna\SEO\ControlPlane\Settings::write( 'llms_enabled', '0' );
+		$this->assertSame( '0', \Sampoorna\SEO\ControlPlane\Settings::read( 'llms_enabled' ) );
+	}
+
 	/* ---------- Audit ---------- */
 
 	public function test_audit_flags_missing_description() {

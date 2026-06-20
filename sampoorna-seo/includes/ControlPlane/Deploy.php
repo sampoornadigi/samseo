@@ -58,7 +58,17 @@ class Deploy {
 			$field = isset( $change['field'] ) ? (string) $change['field'] : '';
 			$value = isset( $change['value'] ) ? (string) $change['value'] : '';
 
-			if ( ! in_array( $type, array( 'post', 'term' ), true ) || $id <= 0 || ! isset( $fields[ $field ] ) ) {
+			if ( 'option' === $type ) {
+				// Site-level setting (config templating): no object id, allow-listed field.
+				if ( ! Settings::has( $field ) ) {
+					continue;
+				}
+				$id = 0;
+			} elseif ( in_array( $type, array( 'post', 'term' ), true ) ) {
+				if ( $id <= 0 || ! isset( $fields[ $field ] ) ) {
+					continue;
+				}
+			} else {
 				continue;
 			}
 
@@ -125,7 +135,13 @@ class Deploy {
 	 * @return string
 	 */
 	private static function read( $type, $id, $field ) {
-		return 'term' === $type ? TermMeta::get( $id, $field ) : MetaStore::get( $id, $field );
+		if ( 'term' === $type ) {
+			return TermMeta::get( $id, $field );
+		}
+		if ( 'option' === $type ) {
+			return Settings::read( $field );
+		}
+		return MetaStore::get( $id, $field );
 	}
 
 	/**
@@ -140,6 +156,8 @@ class Deploy {
 	private static function write( $type, $id, $field, $value ) {
 		if ( 'term' === $type ) {
 			TermMeta::save( $id, array( $field => $value ) );
+		} elseif ( 'option' === $type ) {
+			Settings::write( $field, $value );
 		} else {
 			MetaStore::save( $id, array( $field => $value ) );
 		}
