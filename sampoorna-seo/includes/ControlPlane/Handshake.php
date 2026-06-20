@@ -114,6 +114,15 @@ class Handshake {
 				'permission_callback' => array( $this, 'verify_request' ),
 			)
 		);
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/action',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'handle_action' ),
+				'permission_callback' => array( $this, 'verify_request' ),
+			)
+		);
 	}
 
 	/**
@@ -222,6 +231,17 @@ class Handshake {
 	public function handle_rollback( $request ) {
 		$deploy_id = (string) $request->get_param( 'deploy_id' );
 		return new \WP_REST_Response( Deploy::rollback( $deploy_id ), 200 );
+	}
+
+	/**
+	 * POST /action — run an allow-listed bulk maintenance action.
+	 *
+	 * @param \WP_REST_Request $request Incoming request.
+	 * @return \WP_REST_Response
+	 */
+	public function handle_action( $request ) {
+		$action = (string) $request->get_param( 'action' );
+		return new \WP_REST_Response( Actions::run( $action ), 200 );
 	}
 
 	/**

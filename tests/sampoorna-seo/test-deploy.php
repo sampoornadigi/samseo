@@ -187,6 +187,29 @@ class Sampoorna_Seo_Deploy_Test extends WP_UnitTestCase {
 		$this->assertSame( '0', \Sampoorna\SEO\ControlPlane\Settings::read( 'llms_enabled' ) );
 	}
 
+	/* ---------- Bulk maintenance actions ---------- */
+
+	public function test_action_sitemap_regen_bumps_version() {
+		$before = (int) get_option( \Sampoorna\SEO\Technical\Sitemap::OPT_VERSION, 1 );
+		$res    = \Sampoorna\SEO\ControlPlane\Actions::run( 'sitemap_regen' );
+		$this->assertTrue( $res['ok'] );
+		$this->assertSame( $before + 1, (int) get_option( \Sampoorna\SEO\Technical\Sitemap::OPT_VERSION, 1 ) );
+	}
+
+	public function test_action_unknown_is_rejected() {
+		$res = \Sampoorna\SEO\ControlPlane\Actions::run( 'rm_rf_slash' );
+		$this->assertFalse( $res['ok'] );
+		$this->assertSame( 'unknown_action', $res['error'] );
+	}
+
+	public function test_action_route_runs_with_signature() {
+		$before = (int) get_option( \Sampoorna\SEO\Geo\LlmsTxt::OPT_VERSION, 1 );
+		$body   = wp_json_encode( array( 'action' => 'llms_refresh' ) );
+		$status = $this->dispatch_signed( 'POST', '/sampoorna-seo/v1/action', $body );
+		$this->assertSame( 200, $status );
+		$this->assertSame( $before + 1, (int) get_option( \Sampoorna\SEO\Geo\LlmsTxt::OPT_VERSION, 1 ) );
+	}
+
 	/* ---------- Audit ---------- */
 
 	public function test_audit_flags_missing_description() {

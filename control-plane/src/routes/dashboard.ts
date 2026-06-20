@@ -6,7 +6,7 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { enroll, getById, list, secretFor } from '../repo/sites.js';
-import { deploy, rollback, runAudit } from '../client/siteClient.js';
+import { deploy, rollback, runAction, runAudit } from '../client/siteClient.js';
 import { latestForSite, latestOverallBySite, snapshotCount } from '../repo/metrics.js';
 import {
   changesFromKeys,
@@ -128,6 +128,46 @@ export function registerDashboard(app: FastifyInstance): void {
     await refreshAllSites();
     return reply.redirect('/');
   });
+
+  // --- Bulk operations: fan one action out across selected/all sites ---
+
+  const BULK_ACTIONS = new Set(['sitemap_regen', 'llms_refresh', 'flush_rewrites']);
+
+  app.post(
+    '/bulk',
+    async (
+      request: FastifyRequest<{ Body: { op?: string; sites?: string | string[]; all?: string } }>,
+      reply,
+    ) => {
+      const op = (request.body?.op ?? '').trim();
+      let targets;
+      if (request.body?.all !== undefined) {
+        targets = await list();
+      } else {
+        const raw = request.body?.sites;
+        const ids = new Set((Array.isArray(raw) ? raw : raw ? [raw] : []).map(Number));
+        targets = (await list()).filter((s) => ids.has(s.id));
+      }
+
+      for (const site of targets) {
+        const secret = await secretFor(site.key_id);
+        if (secret === null) {
+          continue;
+        }
+        if (op === 'refresh') {
+          await refreshSite(site, secret);
+        } else if (op === 'audit') {
+          const res = await runAudit(site, secret);
+          if (res.ok) {
+            await saveAudit(site.id, res.findings);
+          }
+        } else if (BULK_ACTIONS.has(op)) {
+          await runAction(site, secret, op);
+        }
+      }
+      return reply.redirect('/');
+    },
+  );
 
   // --- Pipeline: audit → approve → deploy → rollback ---
 

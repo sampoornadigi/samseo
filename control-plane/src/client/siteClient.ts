@@ -16,6 +16,7 @@ const METRICS_ROUTE = '/sampoorna-seo/v1/metrics';
 const AUDIT_ROUTE = '/sampoorna-seo/v1/audit';
 const APPLY_ROUTE = '/sampoorna-seo/v1/apply';
 const ROLLBACK_ROUTE = '/sampoorna-seo/v1/rollback';
+const ACTION_ROUTE = '/sampoorna-seo/v1/action';
 
 /** Signed GET to a site route with an empty body; returns parsed JSON or an error. */
 async function signedGet<T>(site: Site, secret: string, route: string): Promise<{ ok: boolean; status: number; data?: T; error?: string }> {
@@ -116,6 +117,15 @@ export async function deploy(
   changes: Change[],
 ): Promise<{ ok: boolean; status: number; data?: unknown; error?: string }> {
   return signedPost(site, secret, APPLY_ROUTE, { deploy_id: deployId, changes });
+}
+
+/** Run an allow-listed bulk maintenance action on the site. */
+export async function runAction(
+  site: Site,
+  secret: string,
+  action: string,
+): Promise<{ ok: boolean; status: number; data?: unknown; error?: string }> {
+  return signedPost(site, secret, ACTION_ROUTE, { action });
 }
 
 /** Roll a deployment back on the site. */
