@@ -6,7 +6,7 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { enroll, getById, list, secretFor } from '../repo/sites.js';
-import { deploy, rollback, runAction, runAudit } from '../client/siteClient.js';
+import { deploy, rollback, runAction } from '../client/siteClient.js';
 import { latestForSite, latestOverallBySite, snapshotCount } from '../repo/metrics.js';
 import {
   changesFromKeys,
@@ -14,24 +14,14 @@ import {
   insertDeployment,
   latestAudit,
   listDeployments,
-  saveAudit,
   setRolledBack,
 } from '../repo/pipeline.js';
-import { addPrompt, latestResults, listPrompts, recordResults } from '../repo/citation.js';
+import { addPrompt, latestResults, listPrompts } from '../repo/citation.js';
 import { siteIdsForUsername } from '../repo/users.js';
-import { makeLlmClient } from '../llm/client.js';
-import { sample } from '../citation/sampler.js';
 import { readSession } from '../auth/session.js';
 import { refreshAllSites, refreshSite } from '../services/refresh.js';
-
-/** The site's domain host for citation detection. */
-function siteHost(url: string): string {
-  try {
-    return new URL(url).host;
-  } catch {
-    return '';
-  }
-}
+import { auditSite } from '../services/audit.js';
+import { citationSite } from '../services/citation.js';
 
 interface EnrollForm {
   label?: string;
@@ -170,10 +160,7 @@ export function registerDashboard(app: FastifyInstance): void {
         if (op === 'refresh') {
           await refreshSite(site, secret);
         } else if (op === 'audit') {
-          const res = await runAudit(site, secret);
-          if (res.ok) {
-            await saveAudit(site.id, res.findings);
-          }
+          await auditSite(site, secret);
         } else if (BULK_ACTIONS.has(op)) {
           await runAction(site, secret, op);
         }
@@ -194,10 +181,7 @@ export function registerDashboard(app: FastifyInstance): void {
     if (secret === null) {
       return reply.code(404).send({ error: 'site secret missing' });
     }
-    const res = await runAudit(site, secret);
-    if (res.ok) {
-      await saveAudit(site.id, res.findings);
-    }
+    await auditSite(site, secret);
     return reply.redirect(`/sites/${site.id}`);
   });
 
@@ -279,14 +263,7 @@ export function registerDashboard(app: FastifyInstance): void {
     if (!site) {
       return reply.code(404).send({ error: 'site not found' });
     }
-    const prompts = await listPrompts(id);
-    if (prompts.length > 0) {
-      const results = await sample(makeLlmClient(), prompts, {
-        domain: siteHost(site.site_url || site.reach_url),
-        brand: site.label,
-      });
-      await recordResults(site.id, results);
-    }
+    await citationSite(site);
     return reply.redirect(`/sites/${site.id}`);
   });
 }

@@ -32,6 +32,10 @@ export const config = {
   adminPassword: process.env.CP_ADMIN_PASSWORD ?? '',
   /** Minutes between scheduled metric refreshes of all sites; 0 disables. */
   refreshMinutes: Number(process.env.CP_REFRESH_MINUTES ?? 0),
+  /** Minutes between scheduled audits of all sites; 0 disables. */
+  auditMinutes: Number(process.env.CP_AUDIT_MINUTES ?? 0),
+  /** Minutes between scheduled citation sampling of all sites; 0 disables. */
+  citationMinutes: Number(process.env.CP_CITATION_MINUTES ?? 0),
   /** Google PageSpeed Insights API key for the UX/CWV score; empty disables UX scoring. */
   pagespeedKey: process.env.CP_PAGESPEED_KEY ?? '',
   /** PageSpeed strategy: 'mobile' (default) or 'desktop'. */

@@ -135,6 +135,9 @@ services:
       CP_SESSION_SECRET: ${CP_SESSION_SECRET:-dev-session-secret-change-me}
       # Background metric refresh of all sites every N minutes (0 disables).
       CP_REFRESH_MINUTES: ${CP_REFRESH_MINUTES:-30}
+      # Background audit / citation sampling of all sites every N minutes (0 disables).
+      CP_AUDIT_MINUTES: ${CP_AUDIT_MINUTES:-0}
+      CP_CITATION_MINUTES: ${CP_CITATION_MINUTES:-0}
       # Google PageSpeed Insights key for the UX/CWV score (empty disables UX scoring).
       CP_PAGESPEED_KEY: ${CP_PAGESPEED_KEY:-}
       CP_PAGESPEED_STRATEGY: ${CP_PAGESPEED_STRATEGY:-mobile}
