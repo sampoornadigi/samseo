@@ -8,11 +8,13 @@ import { applyDescriptor, list, secretFor, type Site } from '../repo/sites.js';
 import { pullMetrics, pullStatus } from '../client/siteClient.js';
 import { score } from '../score/scorer.js';
 import { insertSnapshot } from '../repo/metrics.js';
+import { maybeAlert } from './alerts.js';
 
 /** Refresh one site (descriptor + scored metrics snapshot). */
 export async function refreshSite(site: Site, secret: string): Promise<{ status: boolean; metrics: boolean }> {
   let status = false;
   let metrics = false;
+  let overall: number | null = null;
 
   const s = await pullStatus(site, secret);
   if (s.ok && s.descriptor) {
@@ -22,9 +24,14 @@ export async function refreshSite(site: Site, secret: string): Promise<{ status:
 
   const m = await pullMetrics(site, secret);
   if (m.ok && m.signals) {
-    await insertSnapshot(site.id, m.signals, score(m.signals));
+    const scored = score(m.signals);
+    overall = scored.overall;
+    await insertSnapshot(site.id, m.signals, scored);
     metrics = true;
   }
+
+  // Fire a webhook alert on any health-state change (best-effort).
+  await maybeAlert(site, { reachable: status || metrics, overall });
 
   return { status, metrics };
 }

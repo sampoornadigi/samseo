@@ -1,6 +1,8 @@
 <div class="card">
   <h2 style="margin:0 0 14px;font-size:15px;">White-label &amp; alerts</h2>
   <% if (saved) { %><div style="background:#edf7ed;border:1px solid var(--good);color:var(--good);padding:8px 12px;border-radius:6px;margin-bottom:14px;">Settings saved.</div><% } %>
+  <% if (typeof testResult !== 'undefined' && testResult === 'sent') { %><div style="background:#edf7ed;border:1px solid var(--good);color:var(--good);padding:8px 12px;border-radius:6px;margin-bottom:14px;">Test alert sent to the webhook.</div><% } %>
+  <% if (typeof testResult !== 'undefined' && testResult === 'failed') { %><div class="err">Test alert failed — check the webhook URL is set and reachable.</div><% } %>
 
   <form method="post" action="/settings">
     <h3 style="margin:6px 0;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">Branding</h3>
@@ -22,5 +24,10 @@
     <div style="margin-top:16px;">
       <button class="btn btn--primary" type="submit">Save settings</button>
     </div>
+  </form>
+
+  <form method="post" action="/settings/test-alert" style="margin-top:10px;">
+    <button class="btn" type="submit">Send test alert</button>
+    <span class="muted">Posts a test message to the saved webhook.</span>
   </form>
 </div>
