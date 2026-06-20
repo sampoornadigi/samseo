@@ -23,7 +23,9 @@ class OAuth {
 
 	const AUTH_ENDPOINT  = 'https://accounts.google.com/o/oauth2/v2/auth';
 	const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
-	const SCOPE          = 'https://www.googleapis.com/auth/webmasters.readonly';
+	// One consent grants both Search Console and GA4 (read-only). Existing
+	// connections must reconnect once to add the analytics scope.
+	const SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly https://www.googleapis.com/auth/analytics.readonly';
 
 	const OPT_CLIENT_ID = 'sampoorna_seo_client_id';
 	const OPT_SECRET    = 'sampoorna_seo_client_secret'; // Stored encrypted.

@@ -15,6 +15,7 @@ use Sampoorna\SEO\Integrations\GSC\Sync;
 use Sampoorna\SEO\Integrations\GSC\Inspector;
 use Sampoorna\SEO\Integrations\GSC\Suggestions;
 use Sampoorna\SEO\Integrations\GSC\Reports;
+use Sampoorna\SEO\Integrations\GA4\Analytics;
 use Sampoorna\SEO\ControlPlane\Keys;
 use Sampoorna\SEO\ControlPlane\Handshake;
 use Sampoorna\SEO\Ai\AiClient;
@@ -59,6 +60,7 @@ class Screens {
 		add_action( 'admin_menu', array( $this, 'menu' ) );
 		add_action( 'admin_post_sampoorna_seo_save_settings', array( $this, 'save_settings' ) );
 		add_action( 'admin_post_sampoorna_seo_select_property', array( $this, 'select_property' ) );
+		add_action( 'admin_post_sampoorna_seo_save_ga4', array( $this, 'save_ga4' ) );
 		add_action( 'admin_post_sampoorna_seo_issue_bulk', array( $this, 'issue_bulk' ) );
 		add_action( 'admin_post_sampoorna_seo_save_control_plane', array( $this, 'save_control_plane' ) );
 		add_action( 'admin_post_sampoorna_seo_rotate_key', array( $this, 'rotate_key' ) );
@@ -216,6 +218,21 @@ class Screens {
 		$property = isset( $_POST['sampoorna_seo_property'] ) ? esc_url_raw( wp_unslash( $_POST['sampoorna_seo_property'] ) ) : '';
 		update_option( OAuth::OPT_PROPERTY, $property );
 		wp_safe_redirect( admin_url( 'admin.php?page=sampoorna-seo-settings&sampoorna_seo_notice=property_saved' ) );
+		exit;
+	}
+
+	/**
+	 * Saves the GA4 numeric property id.
+	 *
+	 * @return void
+	 */
+	public function save_ga4() {
+		if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'sampoorna_seo_save_ga4' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'sampoorna-seo' ) );
+		}
+		$raw = isset( $_POST['sampoorna_seo_ga4_property'] ) ? sanitize_text_field( wp_unslash( $_POST['sampoorna_seo_ga4_property'] ) ) : '';
+		update_option( Analytics::OPT_PROPERTY, preg_replace( '/\D+/', '', $raw ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=sampoorna-seo-settings&sampoorna_seo_notice=ga4_saved' ) );
 		exit;
 	}
 
@@ -884,6 +901,38 @@ class Screens {
 				}
 			endif;
 			?>
+
+			<?php if ( $oauth->is_connected() ) : ?>
+				<hr>
+				<h2><?php esc_html_e( 'Google Analytics 4', 'sampoorna-seo' ); ?></h2>
+				<p class="description"><?php esc_html_e( 'Enter your GA4 numeric property id (Admin → Property settings → Property ID) to show a 28-day traffic summary. Uses the same Google connection above — reconnect once if GA4 reports a scope error.', 'sampoorna-seo' ); ?></p>
+				<?php $ga4 = Analytics::instance(); ?>
+				<form method="post" action="<?php echo $this->action_url( 'sampoorna_seo_save_ga4' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- action_url() returns an esc_url()-escaped string. ?>">
+					<?php wp_nonce_field( 'sampoorna_seo_save_ga4' ); ?>
+					<input type="text" name="sampoorna_seo_ga4_property" value="<?php echo esc_attr( $ga4->property() ); ?>" placeholder="123456789" pattern="[0-9]*" class="regular-text">
+					<?php submit_button( __( 'Save property', 'sampoorna-seo' ), 'secondary', '', false ); ?>
+				</form>
+				<?php
+				if ( $ga4->is_ready() ) {
+					$summary = $ga4->summary( 28 );
+					if ( is_wp_error( $summary ) ) {
+						echo '<p class="notice notice-error" style="padding:8px;">' . esc_html( $summary->get_error_message() ) . '</p>';
+					} else {
+						echo '<p><strong>' . esc_html__( 'Last 28 days:', 'sampoorna-seo' ) . '</strong> '
+							. esc_html(
+								sprintf(
+									/* translators: 1: sessions, 2: users, 3: pageviews, 4: conversions. */
+									__( '%1$s sessions, %2$s users, %3$s views, %4$s conversions.', 'sampoorna-seo' ),
+									number_format_i18n( $summary['sessions'] ),
+									number_format_i18n( $summary['users'] ),
+									number_format_i18n( $summary['views'] ),
+									number_format_i18n( $summary['conversions'] )
+								)
+							) . '</p>';
+					}
+				}
+				?>
+			<?php endif; ?>
 
 			<hr>
 			<h2><?php esc_html_e( 'Control plane', 'sampoorna-seo' ); ?></h2>
