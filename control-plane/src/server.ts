@@ -30,7 +30,7 @@ const viewsDir = join(dirname(fileURLToPath(import.meta.url)), 'views');
 
 // Paths reachable without a dashboard session: health, the login form, and the
 // HMAC-signed site→plane announce endpoint (authenticated by its own signature).
-const PUBLIC_PATHS = new Set(['/healthz', '/login', '/sites/announce']);
+const PUBLIC_PATHS = new Set(['/healthz', '/login', '/sites/announce', '/sso']);
 
 export async function build() {
   const app = Fastify({ logger: true });
