@@ -11,6 +11,7 @@
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "migrate": "tsx src/db/migrate.ts",
+    "backfill:tenants": "tsx scripts/backfill-platform-tenant.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
