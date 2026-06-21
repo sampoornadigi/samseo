@@ -104,6 +104,10 @@ function sampoorna_seo_init() {
 	// Control-plane handshake: signed REST endpoints (registers on all requests).
 	\Sampoorna\SEO\ControlPlane\Handshake::instance();
 
+	// Lead capture: forward form submissions (CF7/WPForms/Gravity/Ninja) to the
+	// control plane -> seo.lead.captured -> CRM contact (Phase 4 SEO->CRM flow).
+	\Sampoorna\SEO\Integrations\Leads\LeadCapture::instance()->register();
+
 	if ( is_admin() ) {
 		\Sampoorna\SEO\Admin\Screens::instance();
 		\Sampoorna\SEO\Admin\MetaBox::instance();

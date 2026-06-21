@@ -310,6 +310,34 @@ class Handshake {
 	}
 
 	/**
+	 * Forward a captured lead to the control plane (signed). No-op when the
+	 * control plane is not configured. Mirrors announce().
+	 *
+	 * @param array<string,mixed> $lead Normalized lead payload.
+	 * @return array|\WP_Error|null
+	 */
+	public function send_lead( array $lead ) {
+		$base = Keys::plane_url();
+		if ( '' === $base || ! Keys::is_configured() ) {
+			return null;
+		}
+		$url   = trailingslashit( $base ) . 'sites/lead';
+		$body  = (string) wp_json_encode( $lead );
+		$route = '/sites/lead';
+		return wp_remote_post(
+			$url,
+			array(
+				'headers' => array_merge(
+					array( 'Content-Type' => 'application/json' ),
+					$this->signed_headers( 'POST', $route, $body )
+				),
+				'body'    => $body,
+				'timeout' => 15,
+			)
+		);
+	}
+
+	/**
 	 * Standard 401 response for failed authentication.
 	 *
 	 * @return \WP_Error
