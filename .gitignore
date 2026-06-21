@@ -10,6 +10,8 @@ node_modules/
 /dist/
 /dist*/
 /wpscm-src-*/
+# Generated PRD (rebuild with: python dev/make_prd.py)
+/docs/*.docx
 
 # WordPress test library (installed into the tooling container)
 /wordpress/
