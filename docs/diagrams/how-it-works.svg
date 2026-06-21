@@ -1,0 +1,100 @@
+<svg viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="t d" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <title id="t">How Sampoorna SEO works</title>
+  <desc id="d">A two-row flow: the top row is the continuous loop an agency runs from one dashboard to optimize many client websites; the bottom row is the payoff — search and AI engines read the optimized sites, bringing more visitors, and the client receives a branded report.</desc>
+  <rect x="0" y="0" width="1000" height="600" fill="#ffffff"/>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#888780"/>
+    </marker>
+  </defs>
+
+  <text x="40" y="40" font-size="23" font-weight="700" fill="#2C2C2A">How Sampoorna SEO works</text>
+  <text x="40" y="65" font-size="13.5" fill="#5F5E5A">One dashboard quietly improves many client websites — and proves the results.</text>
+
+  <rect x="638" y="30" width="13" height="13" rx="3" fill="#EEEDFE" stroke="#AFA9EC"/>
+  <text x="657" y="41" font-size="12" fill="#5F5E5A">What you operate</text>
+  <rect x="788" y="30" width="13" height="13" rx="3" fill="#E6F1FB" stroke="#85B7EB"/>
+  <text x="807" y="41" font-size="12" fill="#5F5E5A">The outside world &amp; results</text>
+
+  <text x="40" y="104" font-size="12" font-weight="700" letter-spacing="0.04em" fill="#534AB7">WHAT YOU DO  ·  RUN FROM ONE DASHBOARD</text>
+
+  <g>
+    <rect x="40" y="116" width="200" height="92" rx="12" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="1.5"/>
+    <circle cx="62" cy="140" r="13" fill="#534AB7"/><text x="62" y="145" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">1</text>
+    <text x="82" y="145" font-size="15" font-weight="700" fill="#26215C">Add a client site</text>
+    <text x="60" y="174" font-size="12.5" fill="#5F5E5A">Secure one-time setup</text>
+    <text x="60" y="192" font-size="12.5" fill="#5F5E5A">(encrypted, private key)</text>
+  </g>
+  <g>
+    <rect x="290" y="116" width="200" height="92" rx="12" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="1.5"/>
+    <circle cx="312" cy="140" r="13" fill="#534AB7"/><text x="312" y="145" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">2</text>
+    <text x="332" y="145" font-size="15" font-weight="700" fill="#26215C">Optimize every page</text>
+    <text x="310" y="174" font-size="12.5" fill="#5F5E5A">Titles · descriptions</text>
+    <text x="310" y="192" font-size="12.5" fill="#5F5E5A">Schema · sitemaps · AI-ready</text>
+  </g>
+  <g>
+    <rect x="540" y="116" width="200" height="92" rx="12" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="1.5"/>
+    <circle cx="562" cy="140" r="13" fill="#534AB7"/><text x="562" y="145" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">3</text>
+    <text x="582" y="145" font-size="15" font-weight="700" fill="#26215C">Report health</text>
+    <text x="560" y="174" font-size="12.5" fill="#5F5E5A">Scored on the dashboard</text>
+    <text x="560" y="192" font-size="12.5" fill="#5F5E5A">Auto-checked on a schedule</text>
+  </g>
+  <g>
+    <rect x="790" y="116" width="200" height="92" rx="12" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="1.5"/>
+    <circle cx="812" cy="140" r="13" fill="#534AB7"/><text x="812" y="145" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">4</text>
+    <text x="832" y="145" font-size="15" font-weight="700" fill="#26215C">Review &amp; publish</text>
+    <text x="810" y="174" font-size="12.5" fill="#5F5E5A">Approve fixes → go live</text>
+    <text x="810" y="192" font-size="12.5" fill="#5F5E5A">One-click undo anytime</text>
+  </g>
+
+  <line x1="244" y1="162" x2="286" y2="162" stroke="#888780" stroke-width="2" marker-end="url(#ah)"/>
+  <line x1="494" y1="162" x2="536" y2="162" stroke="#888780" stroke-width="2" marker-end="url(#ah)"/>
+  <text x="515" y="154" text-anchor="middle" font-size="12" fill="#5F5E5A">secure</text>
+  <line x1="744" y1="162" x2="786" y2="162" stroke="#888780" stroke-width="2" marker-end="url(#ah)"/>
+
+  <path d="M890 208 L890 240 L390 240 L390 210" fill="none" stroke="#534AB7" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ah)"/>
+  <text x="640" y="234" text-anchor="middle" font-size="12.5" font-weight="600" fill="#534AB7">Repeats continuously — always improving</text>
+
+  <line x1="500" y1="258" x2="500" y2="300" stroke="#888780" stroke-width="2" marker-end="url(#ah)"/>
+  <text x="512" y="284" font-size="12.5" font-style="italic" fill="#5F5E5A">this produces…</text>
+
+  <text x="40" y="320" font-size="12" font-weight="700" letter-spacing="0.04em" fill="#185FA5">WHAT IT PRODUCES  ·  THE PAYOFF</text>
+
+  <g>
+    <rect x="40" y="332" width="200" height="92" rx="12" fill="#E6F1FB" stroke="#85B7EB" stroke-width="1.5"/>
+    <circle cx="62" cy="356" r="13" fill="#185FA5"/><text x="62" y="361" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">5</text>
+    <text x="82" y="361" font-size="15" font-weight="700" fill="#042C53">A better website</text>
+    <text x="60" y="390" font-size="12.5" fill="#5F5E5A">Fast, clear, structured</text>
+    <text x="60" y="408" font-size="12.5" fill="#5F5E5A">Server-rendered, reliable</text>
+  </g>
+  <g>
+    <rect x="290" y="332" width="200" height="92" rx="12" fill="#E6F1FB" stroke="#85B7EB" stroke-width="1.5"/>
+    <circle cx="312" cy="356" r="13" fill="#185FA5"/><text x="312" y="361" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">6</text>
+    <text x="332" y="361" font-size="15" font-weight="700" fill="#042C53">Search &amp; AI read it</text>
+    <text x="310" y="390" font-size="12.5" fill="#5F5E5A">Google · Bing</text>
+    <text x="310" y="408" font-size="12.5" fill="#5F5E5A">ChatGPT · Claude · Perplexity</text>
+  </g>
+  <g>
+    <rect x="540" y="332" width="200" height="92" rx="12" fill="#E6F1FB" stroke="#85B7EB" stroke-width="1.5"/>
+    <circle cx="562" cy="356" r="13" fill="#185FA5"/><text x="562" y="361" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">7</text>
+    <text x="582" y="361" font-size="15" font-weight="700" fill="#042C53">More visits &amp; mentions</text>
+    <text x="560" y="390" font-size="12.5" fill="#5F5E5A">Higher rankings</text>
+    <text x="560" y="408" font-size="12.5" fill="#5F5E5A">Cited in AI answers</text>
+  </g>
+  <g>
+    <rect x="790" y="332" width="200" height="92" rx="12" fill="#E6F1FB" stroke="#85B7EB" stroke-width="1.5"/>
+    <circle cx="812" cy="356" r="13" fill="#185FA5"/><text x="812" y="361" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">8</text>
+    <text x="832" y="361" font-size="15" font-weight="700" fill="#042C53">Client sees results</text>
+    <text x="810" y="390" font-size="12.5" fill="#5F5E5A">Branded report</text>
+    <text x="810" y="408" font-size="12.5" fill="#5F5E5A">Instant alerts if issues</text>
+  </g>
+
+  <line x1="244" y1="378" x2="286" y2="378" stroke="#888780" stroke-width="2" marker-end="url(#ah)"/>
+  <line x1="494" y1="378" x2="536" y2="378" stroke="#888780" stroke-width="2" marker-end="url(#ah)"/>
+  <line x1="744" y1="378" x2="786" y2="378" stroke="#888780" stroke-width="2" marker-end="url(#ah)"/>
+
+  <path d="M890 424 L890 470 L60 470 L60 210" fill="none" stroke="#85B7EB" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ah)"/>
+  <text x="475" y="487" text-anchor="middle" font-size="12.5" font-weight="600" fill="#185FA5">Real visitor &amp; ranking data flows back — so the next round of fixes is smarter</text>
+
+  <text x="40" y="540" font-size="12" fill="#5F5E5A">Built-in safety: every change is reversible (one-click undo), secrets stay private, and sites keep working even if the dashboard is offline.</text>
+</svg>

@@ -1,0 +1,109 @@
+<svg viewBox="0 0 1040 660" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="tt dd" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <title id="tt">Sampoorna SEO technical architecture</title>
+  <desc id="dd">Two deployables: a WordPress plugin on each client site and a central Node/Fastify control plane with PostgreSQL. They communicate over a signed HMAC REST handshake. The plugin calls Google, Bing and IndexNow directly; the control plane calls PageSpeed, an LLM, and an alert webhook. Visitors and search/AI crawlers hit the server-rendered site front end.</desc>
+  <rect x="0" y="0" width="1040" height="660" fill="#ffffff"/>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#888780"/></marker>
+    <marker id="ap" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#534AB7"/></marker>
+  </defs>
+
+  <text x="30" y="38" font-size="22" font-weight="700" fill="#2C2C2A">Sampoorna SEO — system architecture</text>
+  <text x="30" y="61" font-size="13" fill="#5F5E5A">Two deployables linked by a signed REST handshake. No runtime third-party deps; AI/provider keys never on client sites.</text>
+
+  <rect x="744" y="30" width="12" height="12" rx="3" fill="#E6F1FB" stroke="#85B7EB"/><text x="761" y="40" font-size="11.5" fill="#5F5E5A">Per-site plugin</text>
+  <rect x="868" y="30" width="12" height="12" rx="3" fill="#EEEDFE" stroke="#AFA9EC"/><text x="885" y="40" font-size="11.5" fill="#5F5E5A">Control plane</text>
+  <rect x="975" y="30" width="12" height="12" rx="3" fill="#F1EFE8" stroke="#B4B2A9"/><text x="992" y="40" font-size="11.5" fill="#5F5E5A">External</text>
+
+  <rect x="30" y="80" width="300" height="40" rx="9" fill="#F1EFE8" stroke="#B4B2A9"/>
+  <text x="180" y="98" text-anchor="middle" font-size="12.5" font-weight="600" fill="#2C2C2A">Visitors &amp; crawlers</text>
+  <text x="180" y="113" text-anchor="middle" font-size="11" fill="#5F5E5A">Googlebot · Bingbot · GPTBot · ClaudeBot</text>
+  <line x1="180" y1="120" x2="180" y2="150" stroke="#888780" stroke-width="2" marker-end="url(#a)"/>
+  <text x="190" y="140" font-size="10.5" fill="#5F5E5A">HTTP</text>
+
+  <polyline points="330,168 350,168 350,138 905,138 905,150" fill="none" stroke="#888780" stroke-width="1.8" marker-end="url(#a)"/>
+  <text x="600" y="132" text-anchor="middle" font-size="11" fill="#5F5E5A">plugin → Google · Bing · IndexNow (direct)</text>
+
+  <rect x="30" y="150" width="300" height="450" rx="14" fill="#E6F1FB" stroke="#85B7EB" stroke-width="1.5"/>
+  <text x="46" y="174" font-size="14.5" font-weight="700" fill="#042C53">WordPress client site · plugin</text>
+  <text x="46" y="191" font-size="11" fill="#185FA5">PHP 8.1+ · PSR-4 · server-rendered</text>
+
+  <rect x="46" y="202" width="268" height="74" rx="9" fill="#fff" stroke="#B5D4F4"/>
+  <text x="58" y="221" font-size="12.5" font-weight="700" fill="#042C53">Front-end output (wp_head)</text>
+  <text x="58" y="239" font-size="11.5" fill="#5F5E5A">meta · @graph schema · canonical</text>
+  <text x="58" y="256" font-size="11.5" fill="#5F5E5A">XML sitemaps · llms.txt · OG/Twitter</text>
+  <text x="58" y="270" font-size="11" fill="#888780">FAQ · HowTo · Product · LocalBusiness · Person</text>
+
+  <rect x="46" y="286" width="268" height="58" rx="9" fill="#fff" stroke="#B5D4F4"/>
+  <text x="58" y="305" font-size="12.5" font-weight="700" fill="#042C53">Signed REST endpoints</text>
+  <text x="58" y="323" font-size="11.5" fill="#5F5E5A">/status /metrics /audit</text>
+  <text x="58" y="338" font-size="11.5" fill="#5F5E5A">/apply /rollback /action</text>
+
+  <rect x="46" y="354" width="268" height="58" rx="9" fill="#fff" stroke="#B5D4F4"/>
+  <text x="58" y="373" font-size="12.5" font-weight="700" fill="#042C53">Modules + integrations</text>
+  <text x="58" y="391" font-size="11.5" fill="#5F5E5A">Meta·Content·Schema·Technical·Geo</text>
+  <text x="58" y="406" font-size="11.5" fill="#5F5E5A">GSC·GA4·Indexing·Bing·IndexNow·Migration</text>
+
+  <g>
+    <path d="M58 470 a90 12 0 0 1 180 0 v44 a90 12 0 0 1 -180 0 z" fill="#fff" stroke="#B5D4F4"/>
+    <ellipse cx="148" cy="470" rx="90" ry="12" fill="#fff" stroke="#B5D4F4"/>
+    <text x="148" y="468" text-anchor="middle" font-size="12.5" font-weight="700" fill="#042C53">WordPress DB</text>
+    <text x="148" y="486" text-anchor="middle" font-size="11" fill="#5F5E5A">options · post/term meta</text>
+    <text x="148" y="501" text-anchor="middle" font-size="11" fill="#5F5E5A">redirects · 404 · change journal</text>
+  </g>
+  <text x="46" y="540" font-size="10.5" fill="#185FA5">Degrades to local-only if the plane is offline.</text>
+
+  <rect x="370" y="150" width="320" height="450" rx="14" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="1.5"/>
+  <text x="386" y="174" font-size="14.5" font-weight="700" fill="#26215C">Control plane</text>
+  <text x="386" y="191" font-size="11" fill="#534AB7">Node · Fastify · EJS (SSR) · Node-crypto only</text>
+
+  <rect x="386" y="202" width="288" height="74" rx="9" fill="#fff" stroke="#CECBF6"/>
+  <text x="398" y="221" font-size="12.5" font-weight="700" fill="#26215C">Dashboard (server-rendered)</text>
+  <text x="398" y="239" font-size="11.5" fill="#5F5E5A">sites · 5-dim health · audit→approve</text>
+  <text x="398" y="256" font-size="11.5" fill="#5F5E5A">→deploy→rollback · templates · bulk</text>
+  <text x="398" y="270" font-size="11" fill="#888780">white-label · branded reports</text>
+
+  <rect x="386" y="286" width="288" height="58" rx="9" fill="#fff" stroke="#CECBF6"/>
+  <text x="398" y="305" font-size="12.5" font-weight="700" fill="#26215C">Auth, roles &amp; vault</text>
+  <text x="398" y="323" font-size="11.5" fill="#5F5E5A">sessions · admin / viewer / client</text>
+  <text x="398" y="338" font-size="11.5" fill="#5F5E5A">AES-256-GCM secret vault</text>
+
+  <rect x="386" y="354" width="288" height="58" rx="9" fill="#fff" stroke="#CECBF6"/>
+  <text x="398" y="373" font-size="12.5" font-weight="700" fill="#26215C">Services + scheduler</text>
+  <text x="398" y="391" font-size="11.5" fill="#5F5E5A">refresh · audit · citation · alerts</text>
+  <text x="398" y="406" font-size="11.5" fill="#5F5E5A">PageSpeed · 3 timed jobs</text>
+
+  <g>
+    <path d="M438 470 a92 12 0 0 1 184 0 v44 a92 12 0 0 1 -184 0 z" fill="#fff" stroke="#CECBF6"/>
+    <ellipse cx="530" cy="470" rx="92" ry="12" fill="#fff" stroke="#CECBF6"/>
+    <text x="530" y="468" text-anchor="middle" font-size="12.5" font-weight="700" fill="#26215C">PostgreSQL</text>
+    <text x="530" y="486" text-anchor="middle" font-size="11" fill="#5F5E5A">sites · metrics · deployments</text>
+    <text x="530" y="501" text-anchor="middle" font-size="11" fill="#5F5E5A">templates · users · settings · alerts</text>
+  </g>
+  <text x="386" y="540" font-size="10.5" fill="#534AB7">Forward-only SQL migrations.</text>
+
+  <line x1="330" y1="315" x2="370" y2="315" stroke="#534AB7" stroke-width="2.5" marker-start="url(#ap)" marker-end="url(#ap)"/>
+  <text x="350" y="300" text-anchor="middle" font-size="11" font-weight="700" fill="#534AB7">signed</text>
+  <text x="350" y="345" text-anchor="middle" font-size="10" fill="#534AB7">HMAC v1</text>
+
+  <rect x="730" y="150" width="280" height="450" rx="14" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="1.5"/>
+  <text x="746" y="174" font-size="14.5" font-weight="700" fill="#2C2C2A">External services</text>
+  <text x="746" y="191" font-size="11" fill="#5F5E5A">credential-gated · stub-safe</text>
+
+  <g font-size="12.5" fill="#2C2C2A">
+    <rect x="746" y="204" width="248" height="44" rx="9" fill="#fff" stroke="#D3D1C7"/>
+    <text x="760" y="223" font-weight="700">Google Search Console · GA4</text><text x="760" y="240" font-size="11" fill="#5F5E5A">OAuth (shared consent)</text>
+    <rect x="746" y="256" width="248" height="44" rx="9" fill="#fff" stroke="#D3D1C7"/>
+    <text x="760" y="275" font-weight="700">Google Indexing API</text><text x="760" y="292" font-size="11" fill="#5F5E5A">service-account JWT</text>
+    <rect x="746" y="308" width="248" height="44" rx="9" fill="#fff" stroke="#D3D1C7"/>
+    <text x="760" y="327" font-weight="700">Bing Webmaster · IndexNow</text><text x="760" y="344" font-size="11" fill="#5F5E5A">URL submission</text>
+    <rect x="746" y="360" width="248" height="44" rx="9" fill="#fff" stroke="#D3D1C7"/>
+    <text x="760" y="379" font-weight="700">Google PageSpeed</text><text x="760" y="396" font-size="11" fill="#5F5E5A">UX / Core Web Vitals (plane)</text>
+    <rect x="746" y="412" width="248" height="44" rx="9" fill="#fff" stroke="#D3D1C7"/>
+    <text x="760" y="431" font-weight="700">Anthropic LLM</text><text x="760" y="448" font-size="11" fill="#5F5E5A">citation sampling (plane)</text>
+    <rect x="746" y="464" width="248" height="44" rx="9" fill="#fff" stroke="#D3D1C7"/>
+    <text x="760" y="483" font-weight="700">Alert webhook</text><text x="760" y="500" font-size="11" fill="#5F5E5A">Slack / Discord (plane)</text>
+  </g>
+
+  <line x1="690" y1="420" x2="730" y2="430" stroke="#888780" stroke-width="1.8" marker-end="url(#a)"/>
+  <text x="710" y="455" text-anchor="middle" font-size="10.5" fill="#5F5E5A">plane →</text>
+</svg>

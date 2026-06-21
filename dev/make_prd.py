@@ -319,6 +319,16 @@ para("Every site↔plane call is HMAC-signed. Canonical string is METHOD \\n ROU
      "\\n sha256_hex(body); signature header sha256=<hmac>; headers X-Sampoorna-Key-Id / "
      "-Timestamp / -Signature; ±300s clock-skew window. Site secrets are AES-256-GCM encrypted "
      "at rest in the plane's vault and never leave it.")
+doc.add_heading("6.4 Diagrams", level=2)
+para("Two companion diagrams ship alongside this document as scalable vector files under "
+     "docs/diagrams/ (insert in Word via Insert ▸ Pictures ▸ This Device — Word renders SVG natively):")
+bullet("how-it-works.svg — a plain-language flow for non-technical readers: the continuous "
+       "optimize → measure → audit → approve → publish loop run from one dashboard, and the "
+       "payoff (search/AI engines read the sites → more visits → branded client report).",
+       bold_lead="Figure 1 — ")
+bullet("architecture.svg — the engineering view: the per-site WordPress plugin and the Node/"
+       "Fastify + PostgreSQL control plane linked by the signed HMAC handshake, plus the "
+       "external services each side calls.", bold_lead="Figure 2 — ")
 
 # ===========================================================================
 # 7. FUNCTIONAL REQUIREMENTS
