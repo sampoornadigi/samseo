@@ -7,12 +7,19 @@
 import { list, secretFor, type Site } from '../repo/sites.js';
 import { runAudit } from '../client/siteClient.js';
 import { saveAudit } from '../repo/pipeline.js';
+import { reportUsage } from '../platform/billing.js';
 
 /** Audit one site and store its findings. Returns false when the call failed. */
 export async function auditSite(site: Site, secret: string): Promise<boolean> {
   const res = await runAudit(site, secret);
   if (res.ok) {
     await saveAudit(site.id, res.findings);
+    // Meter the audit into the one platform wallet (Phase 5); no-op if unconfigured.
+    await reportUsage({
+      tenantId: site.platform_tenant_id,
+      type: 'seo_audit',
+      usageId: `seo-audit-${site.id}-${Date.now()}`,
+    });
     return true;
   }
   return false;

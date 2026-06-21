@@ -19,10 +19,11 @@ export interface Site {
   modules: Record<string, unknown>;
   last_seen: string | null;
   created_at: string;
+  platform_tenant_id: string | null;
 }
 
 const COLUMNS =
-  'id, label, site_url, reach_url, key_id, plugin_version, wp_version, modules, last_seen, created_at';
+  'id, label, site_url, reach_url, key_id, plugin_version, wp_version, modules, last_seen, created_at, platform_tenant_id';
 
 export async function list(): Promise<Site[]> {
   const { rows } = await pool.query<Site>(`SELECT ${COLUMNS} FROM sites ORDER BY label, id`);
