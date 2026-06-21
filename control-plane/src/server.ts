@@ -21,6 +21,7 @@ import { registerReports } from './routes/reports.js';
 import { registerAuth, seedAdmin } from './routes/auth.js';
 import { registerLaunch } from './routes/launch.js';
 import { registerSso } from './routes/sso.js';
+import { registerLead } from './routes/lead.js';
 import { getBranding } from './repo/settings.js';
 import { readSession } from './auth/session.js';
 import { startScheduler } from './scheduler.js';
@@ -30,7 +31,7 @@ const viewsDir = join(dirname(fileURLToPath(import.meta.url)), 'views');
 
 // Paths reachable without a dashboard session: health, the login form, and the
 // HMAC-signed site→plane announce endpoint (authenticated by its own signature).
-const PUBLIC_PATHS = new Set(['/healthz', '/login', '/sites/announce', '/sso']);
+const PUBLIC_PATHS = new Set(['/healthz', '/login', '/sites/announce', '/sites/lead', '/sso']);
 
 export async function build() {
   const app = Fastify({ logger: true });
@@ -90,6 +91,7 @@ export async function build() {
   registerReports(app);
   registerLaunch(app);
   registerSso(app);
+  registerLead(app);
 
   await seedAdmin(app.log);
   startScheduler(app.log);
