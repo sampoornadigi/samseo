@@ -22,6 +22,7 @@ import { registerAuth, seedAdmin } from './routes/auth.js';
 import { getBranding } from './repo/settings.js';
 import { readSession } from './auth/session.js';
 import { startScheduler } from './scheduler.js';
+import { startEventSpine } from './platform/spine.js';
 
 const viewsDir = join(dirname(fileURLToPath(import.meta.url)), 'views');
 
@@ -88,6 +89,7 @@ export async function build() {
 
   await seedAdmin(app.log);
   startScheduler(app.log);
+  startEventSpine(app.log);
   return app;
 }
 
