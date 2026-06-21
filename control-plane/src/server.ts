@@ -19,6 +19,7 @@ import { registerTemplates } from './routes/templates.js';
 import { registerSettings } from './routes/settings.js';
 import { registerReports } from './routes/reports.js';
 import { registerAuth, seedAdmin } from './routes/auth.js';
+import { registerLaunch } from './routes/launch.js';
 import { getBranding } from './repo/settings.js';
 import { readSession } from './auth/session.js';
 import { startScheduler } from './scheduler.js';
@@ -86,6 +87,7 @@ export async function build() {
   registerTemplates(app);
   registerSettings(app);
   registerReports(app);
+  registerLaunch(app);
 
   await seedAdmin(app.log);
   startScheduler(app.log);
