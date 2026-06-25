@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { enroll, getById, list, secretFor, setSiteTenant } from '../repo/sites.js';
+import { listCrmTenants } from '../platform/crmTenants.js';
 import { deploy, rollback, runAction } from '../client/siteClient.js';
 import { latestForSite, latestOverallBySite, snapshotCount } from '../repo/metrics.js';
 import {
@@ -77,11 +78,12 @@ export function registerDashboard(app: FastifyInstance): void {
       deployments,
       prompts,
       citations,
+      clients: await listCrmTenants(),
     });
   });
 
   app.get('/sites/new', async (request, reply) => {
-    return reply.view('new-site.ejs', { title: 'Enroll site', user: readSession(request), error: '' });
+    return reply.view('new-site.ejs', { title: 'Enroll site', user: readSession(request), error: '', clients: await listCrmTenants() });
   });
 
   app.post('/sites', async (request: FastifyRequest<{ Body: EnrollForm }>, reply) => {
