@@ -35,6 +35,15 @@ export async function getById(id: number): Promise<Site | null> {
   return rows[0] ?? null;
 }
 
+/** Site ids enrolled under a platform (CRM) tenant — used to scope a client's SSO session. */
+export async function siteIdsForTenant(platformTenantId: string): Promise<number[]> {
+  const { rows } = await pool.query<{ id: number }>(
+    'SELECT id FROM sites WHERE platform_tenant_id = $1',
+    [platformTenantId],
+  );
+  return rows.map((r) => r.id);
+}
+
 /** Decrypted shared secret for a key_id, or null when the site is unknown. */
 export async function secretFor(keyId: string): Promise<string | null> {
   const { rows } = await pool.query<{ secret_enc: string }>(
