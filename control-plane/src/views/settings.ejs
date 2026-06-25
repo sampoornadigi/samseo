@@ -8,10 +8,10 @@
     <h3 style="margin:6px 0;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">Branding</h3>
     <label>Brand name (header &amp; titles)</label>
     <input type="text" name="brand_name" value="<%= settings.brand_name %>">
-    <label>Logo URL (optional — shown in the header instead of the name)</label>
+    <label>Logo URL (optional — shown in the header instead of the name) <span class="tip" tabindex="0" data-tip="A publicly reachable image URL (PNG or SVG). It replaces the brand-name text in the dark header, so a white/transparent logo works best.">ⓘ</span></label>
     <input type="text" name="brand_logo" value="<%= settings.brand_logo %>" placeholder="https://…/logo.svg">
-    <label>Accent colour</label>
-    <input type="text" name="brand_accent" value="<%= settings.brand_accent %>" placeholder="#2271b1">
+    <label>Accent colour <span class="tip" tabindex="0" data-tip="A hex colour like #FFC83D used for buttons and links. Leave the platform gold unless you’re white-labelling for a client.">ⓘ</span></label>
+    <input type="text" name="brand_accent" value="<%= settings.brand_accent %>" placeholder="#FFC83D">
     <label>Support URL (optional — footer link)</label>
     <input type="text" name="support_url" value="<%= settings.support_url %>" placeholder="https://…">
 
