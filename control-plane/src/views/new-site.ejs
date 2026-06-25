@@ -14,10 +14,10 @@
     <label for="reach_url">Reachable URL</label>
     <input type="text" id="reach_url" name="reach_url" placeholder="https://client.example.com (dev: http://wordpress)">
 
-    <label for="key_id">Key id</label>
+    <label for="key_id">Key id <span class="tip" tabindex="0" data-tip="Find this in the site’s WordPress admin → Sampoorna SEO → Settings → “Control plane”. It pairs the site with this control plane.">ⓘ</span></label>
     <input type="text" id="key_id" name="key_id" placeholder="k_xxxxxxxxxxxx">
 
-    <label for="secret">Shared secret</label>
+    <label for="secret">Shared secret <span class="tip" tabindex="0" data-tip="The 64-character secret shown next to the Key id in the same WordPress settings. It signs the site’s requests so they can be trusted.">ⓘ</span></label>
     <input type="text" id="secret" name="secret" placeholder="64 hex characters">
 
     <label for="platform_tenant_id">Client <span class="muted">— optional</span></label>

@@ -65,6 +65,8 @@
     .help-head button { background:none; border:0; cursor:pointer; font-size:18px; color:var(--muted); }
     #help-steps { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:9px; font-size:13.5px; line-height:1.5; }
     #help-steps li::marker { color:var(--gold); }
+    .tip { position:relative; display:inline-block; color:var(--muted); cursor:help; font-size:12px; }
+    .tip:hover::after, .tip:focus::after { content:attr(data-tip); position:absolute; left:0; top:150%; z-index:70; width:240px; background:var(--ink); color:#fff; border-radius:8px; padding:8px 10px; font-size:12px; line-height:1.45; font-weight:400; white-space:normal; box-shadow:0 8px 24px rgba(0,0,0,.22); }
   </style>
   <script>
     (function () {
