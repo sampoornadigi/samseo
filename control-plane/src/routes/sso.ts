@@ -9,8 +9,13 @@
  */
 
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { randomBytes } from 'node:crypto';
 import { verifyPlatformJwt } from '../platform/jwksVerify.js';
 import { makeToken, setSessionCookie } from '../auth/session.js';
+import { resolveSeoSso, SsoDenied } from './sso-user.js';
+import { createUser, idForUsername, setUserSites } from '../repo/users.js';
+import { siteIdsForTenant } from '../repo/sites.js';
+import { hashPassword } from '../crypto/password.js';
 
 const SSO_COOKIE = 'smp_sso';
 
@@ -37,12 +42,21 @@ export function registerSso(app: FastifyInstance): void {
       return reply.redirect('/login?sso=invalid');
     }
 
-    if (principal.role !== 'super_admin') {
-      return reply.code(403).send('The SEO control plane is restricted to agency staff.');
+    // super_admin → unscoped agency session; a CRM client → a 'client' session
+    // scoped to their own enrolled sites (see resolveSeoSso).
+    try {
+      const { username, role } = await resolveSeoSso(principal, {
+        ensureUser: (u, r) => createUser(u, hashPassword(randomBytes(24).toString('hex')), r),
+        idForUsername,
+        siteIdsForTenant,
+        setUserSites,
+      });
+      setSessionCookie(reply, makeToken(username, role));
+      return reply.redirect('/');
+    } catch (err) {
+      if (err instanceof SsoDenied) return reply.code(err.status).send(err.message);
+      request.log.error({ err }, 'sso handoff failed');
+      return reply.redirect('/login?sso=error');
     }
-
-    // Bootstrap a local session from the verified platform identity.
-    setSessionCookie(reply, makeToken(principal.userId ?? 'platform-admin', 'admin'));
-    return reply.redirect('/');
   });
 }
