@@ -5,6 +5,19 @@
   </div>
   <p class="muted" style="margin-top:0;"><%= site.site_url || site.reach_url %> &middot; <code><%= site.key_id %></code></p>
 
+  <% if (user && user.role === 'admin') { %>
+    <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin:6px 0 16px;">
+      <div style="font-weight:600;margin-bottom:4px;">Assigned client (CRM tenant)</div>
+      <p class="muted" style="margin:0 0 8px;font-size:12px;">
+        <% if (site.platform_tenant_id) { %>Mapped to <code><%= site.platform_tenant_id %></code> — this client's login sees this site.<% } else { %>Not mapped to a client yet. Paste the tenant id from the CRM Clients list so their login can see this site.<% } %>
+      </p>
+      <form method="post" action="/sites/<%= site.id %>/tenant" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0;">
+        <input type="text" name="platform_tenant_id" value="<%= site.platform_tenant_id || '' %>" placeholder="CRM tenant id (leave blank to unmap)" style="min-width:320px;">
+        <button class="btn btn--primary" type="submit">Save client</button>
+      </form>
+    </div>
+  <% } %>
+
   <% if (!latest) { %>
     <p class="muted">No health snapshot yet. Use <strong>Refresh</strong> on the sites list to pull metrics from this site.</p>
   <% } else {
