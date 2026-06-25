@@ -51,5 +51,44 @@
   </header>
   <main><%- body %></main>
   <% if (b.supportUrl) { %><footer style="max-width:1000px;margin:24px auto;padding:0 24px;color:var(--muted);font-size:12px;">Need help? <a href="<%= b.supportUrl %>" style="color:var(--accent);">Contact support</a></footer><% } %>
+
+  <button id="help-fab" aria-label="Help" title="How to use this page">?</button>
+  <div id="help-panel" role="dialog" aria-label="Help" hidden>
+    <div class="help-head"><strong id="help-title">Help</strong><button id="help-close" aria-label="Close help">&times;</button></div>
+    <ul id="help-steps"></ul>
+  </div>
+  <style>
+    #help-fab { position:fixed; bottom:22px; right:22px; z-index:60; width:46px; height:46px; border-radius:50%; background:var(--gold); color:var(--navy); font:700 22px 'Space Grotesk',sans-serif; border:0; cursor:pointer; box-shadow:0 4px 16px rgba(255,200,61,.35); }
+    #help-panel { position:fixed; bottom:80px; right:22px; z-index:60; width:min(360px,calc(100vw - 44px)); background:#fff; border:1px solid var(--line); border-radius:14px; padding:15px 18px 17px; box-shadow:0 12px 40px rgba(0,0,0,.18); max-height:70vh; overflow:auto; }
+    #help-panel[hidden] { display:none; }
+    .help-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; font-family:'Space Grotesk',sans-serif; }
+    .help-head button { background:none; border:0; cursor:pointer; font-size:18px; color:var(--muted); }
+    #help-steps { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:9px; font-size:13.5px; line-height:1.5; }
+    #help-steps li::marker { color:var(--gold); }
+  </style>
+  <script>
+    (function () {
+      var HELP = {
+        '/': { title:'Sites', steps:['This lists your enrolled sites with their health score and status.','Click a site name to open its detail and assign it to a client.','“Refresh” pulls fresh metrics from a site; “Enroll a site” adds a new one.'] },
+        '/sites/new': { title:'Enroll a site', steps:['In the site’s WordPress admin → Sampoorna SEO → Settings, copy the Key id and Shared secret.','Paste them here along with the reachable URL.','Pick the Client so their CRM login can see this site’s SEO data.','After enrolling, the plugin announces itself and the control plane begins pulling metrics.'] },
+        '/templates': { title:'Templates', steps:['Manage the content/SEO templates the control plane can push to enrolled sites.'] },
+        '/users': { title:'Users', steps:['Add control-plane logins.','A “client” role user is scoped to only the sites you assign them.'] },
+        '/settings': { title:'Settings', steps:['Configure white-label branding and control-plane settings.'] },
+        '/login': { title:'Sign in', steps:['Enter your control-plane username and password.','Agency staff who signed in on the platform are brought here automatically.'] },
+        'site': { title:'Site detail', steps:['Shows this site’s SEO health across Content, Authority, Technical, UX and GEO/AEO.','“Assigned client” maps the site to a CRM client so their login sees it (leave blank to unmap).','Use “Refresh” on the Sites list to pull the latest snapshot.'] },
+        '_default': { title:'How to use this page', steps:['Use the top navigation to move between Sites, Templates, Users and Settings.'] }
+      };
+      var p = location.pathname.replace(/\/+$/, '') || '/';
+      var key = HELP[p] ? p : (/^\/sites\/\d+/.test(p) ? 'site' : '_default');
+      var h = HELP[key];
+      var fab = document.getElementById('help-fab'), panel = document.getElementById('help-panel');
+      document.getElementById('help-title').textContent = h.title;
+      document.getElementById('help-steps').innerHTML = h.steps.map(function (s) { return '<li></li>'; }).join('');
+      document.querySelectorAll('#help-steps li').forEach(function (li, i) { li.textContent = h.steps[i]; });
+      function toggle(show) { panel.hidden = !show; fab.innerHTML = show ? '&times;' : '?'; }
+      fab.addEventListener('click', function () { toggle(panel.hidden); });
+      document.getElementById('help-close').addEventListener('click', function () { toggle(false); });
+    })();
+  </script>
 </body>
 </html>
