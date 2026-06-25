@@ -20,8 +20,18 @@
     <label for="secret">Shared secret</label>
     <input type="text" id="secret" name="secret" placeholder="64 hex characters">
 
-    <label for="platform_tenant_id">Client (CRM tenant id) <span class="muted">— optional</span></label>
-    <input type="text" id="platform_tenant_id" name="platform_tenant_id" placeholder="paste the tenant id from the CRM Clients list">
+    <label for="platform_tenant_id">Client <span class="muted">— optional</span></label>
+    <% var hasClients = (typeof clients !== 'undefined') && clients && clients.length > 0; %>
+    <% if (hasClients) { %>
+      <select id="platform_tenant_id" name="platform_tenant_id">
+        <option value="">— none —</option>
+        <% clients.forEach(function (c) { %>
+          <option value="<%= c.id %>"><%= c.name %><% if (c.entitlements && c.entitlements.indexOf('seo') === -1) { %> (no SEO entitlement)<% } %></option>
+        <% }); %>
+      </select>
+    <% } else { %>
+      <input type="text" id="platform_tenant_id" name="platform_tenant_id" placeholder="paste the tenant id from the CRM Clients list">
+    <% } %>
     <p class="muted" style="margin-top:4px;font-size:12px;">Maps this site to a CRM client so their login sees it. You can also set it later from the site page.</p>
 
     <p style="margin-top:18px;">
