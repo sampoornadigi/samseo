@@ -5,13 +5,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><%= title %> · <%= b.name %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root { --ink:#1d2327; --muted:#646970; --line:#dcdcde; --good:#1a7f37; --bad:#b42318; --bg:#f6f7f7; --accent:<%= b.accent %>; }
+    :root { --ink:#1d2327; --muted:#646970; --line:#dcdcde; --good:#1a7f37; --bad:#b42318; --bg:#f6f7f7; --accent:<%= b.accent %>; --navy:#1A2232; --gold:#FFC83D; }
     * { box-sizing: border-box; }
     body { margin:0; font:14px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:var(--bg); }
-    header { background:#1d2327; color:#fff; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; }
-    header h1 { font-size:16px; margin:0; font-weight:600; }
-    header a { color:#9ec5fe; text-decoration:none; }
+    header { background:var(--navy); color:#fff; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; }
+    header h1 { font-size:17px; margin:0; font-weight:600; font-family:'Space Grotesk',sans-serif; letter-spacing:-.01em; }
+    header a { color:var(--gold); text-decoration:none; }
     main { max-width:1000px; margin:24px auto; padding:0 24px; }
     .card { background:#fff; border:1px solid var(--line); border-radius:8px; padding:18px 20px; }
     table { width:100%; border-collapse:collapse; }
@@ -20,7 +22,7 @@
     .pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:600; color:#fff; }
     .pill--good { background:var(--good); } .pill--bad { background:var(--bad); } .pill--stale { background:#bf8700; }
     .btn { display:inline-block; padding:6px 12px; border-radius:5px; border:1px solid var(--line); background:#fff; color:var(--ink); text-decoration:none; cursor:pointer; font:inherit; }
-    .btn--primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .btn--primary { background:var(--gold); border-color:var(--gold); color:var(--navy); font-weight:600; }
     .muted { color:var(--muted); }
     .err { background:#fcf0ef; border:1px solid var(--bad); color:var(--bad); padding:10px 12px; border-radius:6px; margin-bottom:14px; }
     form.inline { display:inline; }
@@ -39,10 +41,10 @@
         <a href="/">Sites</a>
         <% if (user.role !== 'client') { %> &middot; <a href="/templates">Templates</a><% } %>
         <% if (user.role === 'admin') { %> &middot; <a href="/users">Users</a> &middot; <a href="/settings">Settings</a><% } %>
-        &middot; <span class="muted" style="color:#9ec5fe;"><%= user.username %> (<%= user.role %>)</span>
+        &middot; <span style="color:rgba(255,255,255,.72);"><%= user.username %> (<%= user.role %>)</span>
         &middot;
         <form class="inline" method="post" action="/logout" style="display:inline;">
-          <button type="submit" style="background:none;border:0;color:#9ec5fe;cursor:pointer;font:inherit;padding:0;text-decoration:underline;">Log out</button>
+          <button type="submit" style="background:none;border:0;color:var(--gold);cursor:pointer;font:inherit;padding:0;text-decoration:underline;">Log out</button>
         </form>
       <% } %>
     </nav>
