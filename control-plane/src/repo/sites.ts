@@ -61,15 +61,25 @@ export interface EnrollInput {
   reachUrl: string;
   keyId: string;
   secret: string;
+  /** CRM tenant this site belongs to — scopes the client's SSO to it. */
+  platformTenantId?: string | null;
 }
 
 /** Add a site by config (manual enrollment). Throws on duplicate key_id. */
 export async function enroll(input: EnrollInput): Promise<void> {
   await pool.query(
-    `INSERT INTO sites (label, reach_url, key_id, secret_enc)
-     VALUES ($1, $2, $3, $4)`,
-    [input.label, input.reachUrl, input.keyId, encrypt(input.secret)],
+    `INSERT INTO sites (label, reach_url, key_id, secret_enc, platform_tenant_id)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [input.label, input.reachUrl, input.keyId, encrypt(input.secret), input.platformTenantId || null],
   );
+}
+
+/** Map (or unmap with null) a site to a CRM tenant — drives the client's SSO scope. */
+export async function setSiteTenant(siteId: number, platformTenantId: string | null): Promise<void> {
+  await pool.query('UPDATE sites SET platform_tenant_id = $2 WHERE id = $1', [
+    siteId,
+    platformTenantId || null,
+  ]);
 }
 
 export interface Descriptor {

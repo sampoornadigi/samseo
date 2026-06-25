@@ -20,6 +20,10 @@
     <label for="secret">Shared secret</label>
     <input type="text" id="secret" name="secret" placeholder="64 hex characters">
 
+    <label for="platform_tenant_id">Client (CRM tenant id) <span class="muted">— optional</span></label>
+    <input type="text" id="platform_tenant_id" name="platform_tenant_id" placeholder="paste the tenant id from the CRM Clients list">
+    <p class="muted" style="margin-top:4px;font-size:12px;">Maps this site to a CRM client so their login sees it. You can also set it later from the site page.</p>
+
     <p style="margin-top:18px;">
       <button class="btn btn--primary" type="submit">Enroll</button>
       <a class="btn" href="/">Cancel</a>

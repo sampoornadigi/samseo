@@ -5,7 +5,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { enroll, getById, list, secretFor } from '../repo/sites.js';
+import { enroll, getById, list, secretFor, setSiteTenant } from '../repo/sites.js';
 import { deploy, rollback, runAction } from '../client/siteClient.js';
 import { latestForSite, latestOverallBySite, snapshotCount } from '../repo/metrics.js';
 import {
@@ -28,6 +28,7 @@ interface EnrollForm {
   reach_url?: string;
   key_id?: string;
   secret?: string;
+  platform_tenant_id?: string;
 }
 
 export function registerDashboard(app: FastifyInstance): void {
@@ -98,8 +99,9 @@ export function registerDashboard(app: FastifyInstance): void {
       });
     }
 
+    const platformTenantId = (body.platform_tenant_id ?? '').trim() || null;
     try {
-      await enroll({ label, reachUrl, keyId, secret });
+      await enroll({ label, reachUrl, keyId, secret, platformTenantId });
     } catch (err) {
       const msg = err instanceof Error && /unique/i.test(err.message)
         ? 'A site with that key id is already enrolled.'
@@ -108,6 +110,18 @@ export function registerDashboard(app: FastifyInstance): void {
     }
 
     return reply.redirect('/');
+  });
+
+  // Map (or clear with an empty value) a site's CRM client. admin-only via the
+  // global write-guard (server.ts). Drives the per-client SSO scope.
+  app.post('/sites/:id/tenant', async (request: FastifyRequest<{ Params: { id: string }; Body: { platform_tenant_id?: string } }>, reply) => {
+    const id = Number(request.params.id);
+    if (!Number.isFinite(id) || !(await getById(id))) {
+      return reply.code(404).send({ error: 'site not found' });
+    }
+    const tenantId = (request.body?.platform_tenant_id ?? '').trim() || null;
+    await setSiteTenant(id, tenantId);
+    return reply.redirect(`/sites/${id}`);
   });
 
   app.post('/sites/:id/refresh', async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
