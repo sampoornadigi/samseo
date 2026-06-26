@@ -23,8 +23,11 @@ function client(): Redis | null {
     redis = new IORedis({
       host: process.env.REDIS_HOST || 'localhost',
       port: Number(process.env.REDIS_PORT || 6379),
-      maxRetriesPerRequest: null,
-      enableOfflineQueue: false,
+      maxRetriesPerRequest: 1,
+      // Offline queue ON so the first call (before the connection is ready) waits
+      // for it rather than failing open on a cold start; commandTimeout bounds a
+      // truly-down Redis so the check still fails open quickly.
+      commandTimeout: 1000,
     });
     redis.on('error', () => undefined);
   }
