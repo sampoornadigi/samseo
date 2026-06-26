@@ -17,7 +17,7 @@ import {
   listDeployments,
   setRolledBack,
 } from '../repo/pipeline.js';
-import { addPrompt, latestResults, listPrompts } from '../repo/citation.js';
+import { addPrompt, citationSummary, latestResults, listPrompts } from '../repo/citation.js';
 import { siteIdsForUsername } from '../repo/users.js';
 import { readSession } from '../auth/session.js';
 import { refreshAllSites, refreshSite } from '../services/refresh.js';
@@ -68,6 +68,7 @@ export function registerDashboard(app: FastifyInstance): void {
     const deployments = await listDeployments(id);
     const prompts = await listPrompts(id);
     const citations = await latestResults(id);
+    const citation = await citationSummary(id);
     return reply.view('site-detail.ejs', {
       title: site.label || site.site_url,
       user: readSession(request),
@@ -78,6 +79,7 @@ export function registerDashboard(app: FastifyInstance): void {
       deployments,
       prompts,
       citations,
+      citation,
       clients: await listCrmTenants(),
     });
   });

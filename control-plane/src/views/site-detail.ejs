@@ -154,7 +154,7 @@
 
 <div class="card" style="margin-top:18px;">
   <h2 style="margin:0 0 6px;font-size:15px;">AI citation tracking</h2>
-  <p class="muted" style="margin-top:0;">Track whether AI answer engines mention this site for sample prompts. Detection looks for the domain (<code><%= (function(){ try { return new URL(site.site_url || site.reach_url).host; } catch (e) { return ''; } })() %></code>) or brand in the answer.</p>
+  <p class="muted" style="margin-top:0;">Track whether AI answer engines (Perplexity / Claude) cite this site for sample prompts — and which competitors get cited instead. Detection looks for the domain (<code><%= (function(){ try { return new URL(site.site_url || site.reach_url).host; } catch (e) { return ''; } })() %></code>) or brand in the answer and its cited sources.</p>
 
   <form method="post" action="/sites/<%= site.id %>/citation/prompt" style="display:flex;gap:8px;max-width:680px;">
     <input type="text" name="prompt" placeholder="e.g. best SEO agency in Hyderabad" style="flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:5px;">
@@ -175,10 +175,32 @@
     <p class="muted">No prompts yet — add one above.</p>
   <% } %>
 
+  <% if (citation && citation.trend && citation.trend.length > 0) {
+       var latest = citation.trend[0];
+       var rate = latest.total ? Math.round((latest.cited / latest.total) * 100) : 0; %>
+    <div style="margin-top:16px;display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;">
+      <div>
+        <div class="muted" style="font-size:12px;">Citation rate (latest run)</div>
+        <div style="font-size:22px;font-weight:700;"><%= rate %>% <span class="muted" style="font-size:13px;font-weight:400;">(<%= latest.cited %>/<%= latest.total %> prompts)</span></div>
+        <% if (citation.trend.length > 1) { %>
+          <div class="muted" style="font-size:12px;margin-top:4px;">Recent: <%= citation.trend.slice(0, 7).reverse().map(function (t) { return t.total ? Math.round((t.cited / t.total) * 100) + '%' : '–'; }).join(' · ') %></div>
+        <% } %>
+      </div>
+      <% if (citation.topCompetitors && citation.topCompetitors.length > 0) { %>
+        <div>
+          <div class="muted" style="font-size:12px;">Competitors getting cited (30d)</div>
+          <div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap;">
+            <% citation.topCompetitors.forEach(function (tc) { %><span style="display:inline-block;padding:2px 9px;border:1px solid var(--line);border-radius:999px;font-size:12px;"><%= tc.domain %> ×<%= tc.n %></span><% }); %>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  <% } %>
+
   <% if (citations && citations.length > 0) { %>
     <h3 style="font-size:14px;margin:18px 0 6px;">Latest results</h3>
     <table>
-      <thead><tr><th>Prompt</th><th>Cited?</th><th>Model</th><th>Answer snippet</th><th>When</th></tr></thead>
+      <thead><tr><th>Prompt</th><th>Cited?</th><th>Competitors cited</th><th>Model</th><th>Answer snippet</th><th>When</th></tr></thead>
       <tbody>
         <% citations.forEach(function (c) { %>
           <tr>
@@ -187,6 +209,7 @@
               <% if (c.cited) { %><span class="pill pill--good">cited</span>
               <% } else { %><span class="pill pill--bad">no</span><% } %>
             </td>
+            <td class="muted" style="font-size:12px;"><%= (c.competitors && c.competitors.length) ? c.competitors.join(', ') : '—' %></td>
             <td><code><%= c.model %></code></td>
             <td class="muted"><%= c.snippet %></td>
             <td class="muted"><%= new Date(c.captured_at).toLocaleString() %></td>

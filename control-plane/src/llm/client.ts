@@ -13,6 +13,8 @@ import { config } from '../config.js';
 export interface LlmAnswer {
   text: string;
   model: string;
+  /** Source URLs the engine cited (Perplexity); empty for engines without web search. */
+  citations?: string[];
 }
 
 export interface LlmClient {
@@ -50,13 +52,57 @@ export class AnthropicLlmClient implements LlmClient {
       }),
       signal: AbortSignal.timeout(30000),
     });
+    // Throw on a non-2xx so a failed sample is SKIPPED, not recorded as a false
+    // "not cited" (which would silently deflate the citation-rate trend).
+    if (!res.ok) throw new Error(`Anthropic API ${res.status}`);
     const data = (await res.json()) as { content?: Array<{ text?: string }> };
     const text = Array.isArray(data.content) ? data.content.map((b) => b.text ?? '').join(' ').trim() : '';
     return { text, model: this.model };
   }
 }
 
-/** Build the configured client (Anthropic when keyed, else the stub). */
+/**
+ * Real Perplexity client — an actual answer engine (web search + source URLs).
+ * The cited source URLs are the gold signal for "who gets cited"; we surface them
+ * for both self-citation and competitor detection. OpenAI-compatible wire format.
+ */
+export class PerplexityLlmClient implements LlmClient {
+  constructor(
+    private readonly key: string,
+    private readonly model: string,
+  ) {}
+
+  async ask(prompt: string): Promise<LlmAnswer> {
+    const res = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${this.key}`,
+      },
+      body: JSON.stringify({
+        model: this.model,
+        max_tokens: 512,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!res.ok) throw new Error(`Perplexity API ${res.status}`);
+    const data = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+      citations?: string[];
+    };
+    const text = data.choices?.[0]?.message?.content?.trim() ?? '';
+    const citations = Array.isArray(data.citations) ? data.citations.filter((u) => typeof u === 'string') : [];
+    return { text, model: this.model, citations };
+  }
+}
+
+/**
+ * Build the configured client. Perplexity (a real answer engine) is preferred
+ * when keyed, then Anthropic, else the deterministic stub for tests/dev.
+ */
 export function makeLlmClient(): LlmClient {
-  return config.llmKey ? new AnthropicLlmClient(config.llmKey, config.llmModel) : new StubLlmClient();
+  if (config.perplexityKey) return new PerplexityLlmClient(config.perplexityKey, config.perplexityModel);
+  if (config.llmKey) return new AnthropicLlmClient(config.llmKey, config.llmModel);
+  return new StubLlmClient();
 }
