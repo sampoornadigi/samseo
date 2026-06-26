@@ -80,7 +80,12 @@ export async function build() {
       return; // any signed-in user may log out
     }
     if (request.method !== 'GET' && session.role !== 'admin') {
-      return reply.code(403).send('Forbidden: your role is read-only.');
+      // Clients are otherwise read-only, but may self-enroll THEIR OWN site
+      // (POST /sites) — the handler pins it to the client's own tenant.
+      const clientSelfEnroll = session.role === 'client' && request.method === 'POST' && path === '/sites';
+      if (!clientSelfEnroll) {
+        return reply.code(403).send('Forbidden: your role is read-only.');
+      }
     }
   });
 

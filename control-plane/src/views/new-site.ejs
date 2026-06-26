@@ -1,9 +1,18 @@
+<% var isAdmin = (typeof user !== 'undefined' && user && user.role === 'admin'); %>
 <div class="card" style="max-width:560px;">
-  <h2 style="margin:0 0 6px;font-size:15px;">Enroll a site</h2>
-  <p class="muted" style="margin-top:0;">
-    In the site’s WordPress admin → Sampoorna SEO → Settings → “Control plane”, copy the
-    <strong>Key id</strong> and <strong>Shared secret</strong> and paste them here.
-  </p>
+  <h2 style="margin:0 0 6px;font-size:15px;"><%= isAdmin ? 'Enroll a site' : 'Connect your website' %></h2>
+  <% if (isAdmin) { %>
+    <p class="muted" style="margin-top:0;">
+      In the site’s WordPress admin → Sampoorna SEO → Settings → “Control plane”, copy the
+      <strong>Key id</strong> and <strong>Shared secret</strong> and paste them here.
+    </p>
+  <% } else { %>
+    <ol class="muted" style="margin:6px 0 14px;padding-left:18px;line-height:1.7;">
+      <li>Install the <strong>Sampoorna SEO</strong> plugin on your WordPress site (your agency can share it).</li>
+      <li>In WordPress, open <strong>Sampoorna SEO → Settings → “Control plane”</strong>.</li>
+      <li>Copy the <strong>Key id</strong> and <strong>Shared secret</strong> shown there and paste them below.</li>
+    </ol>
+  <% } %>
 
   <% if (error) { %><div class="err"><%= error %></div><% } %>
 
@@ -20,22 +29,24 @@
     <label for="secret">Shared secret <span class="tip" tabindex="0" data-tip="The 64-character secret shown next to the Key id in the same WordPress settings. It signs the site’s requests so they can be trusted.">ⓘ</span></label>
     <input type="text" id="secret" name="secret" placeholder="64 hex characters">
 
-    <label for="platform_tenant_id">Client <span class="muted">— optional</span></label>
-    <% var hasClients = (typeof clients !== 'undefined') && clients && clients.length > 0; %>
-    <% if (hasClients) { %>
-      <select id="platform_tenant_id" name="platform_tenant_id">
-        <option value="">— none —</option>
-        <% clients.forEach(function (c) { %>
-          <option value="<%= c.id %>"><%= c.name %><% if (c.entitlements && c.entitlements.indexOf('seo') === -1) { %> (no SEO entitlement)<% } %></option>
-        <% }); %>
-      </select>
-    <% } else { %>
-      <input type="text" id="platform_tenant_id" name="platform_tenant_id" placeholder="paste the tenant id from the CRM Clients list">
+    <% if (isAdmin) { %>
+      <label for="platform_tenant_id">Client <span class="muted">— optional</span></label>
+      <% var hasClients = (typeof clients !== 'undefined') && clients && clients.length > 0; %>
+      <% if (hasClients) { %>
+        <select id="platform_tenant_id" name="platform_tenant_id">
+          <option value="">— none —</option>
+          <% clients.forEach(function (c) { %>
+            <option value="<%= c.id %>"><%= c.name %><% if (c.entitlements && c.entitlements.indexOf('seo') === -1) { %> (no SEO entitlement)<% } %></option>
+          <% }); %>
+        </select>
+      <% } else { %>
+        <input type="text" id="platform_tenant_id" name="platform_tenant_id" placeholder="paste the tenant id from the CRM Clients list">
+      <% } %>
+      <p class="muted" style="margin-top:4px;font-size:12px;">Maps this site to a CRM client so their login sees it. You can also set it later from the site page.</p>
     <% } %>
-    <p class="muted" style="margin-top:4px;font-size:12px;">Maps this site to a CRM client so their login sees it. You can also set it later from the site page.</p>
 
     <p style="margin-top:18px;">
-      <button class="btn btn--primary" type="submit">Enroll</button>
+      <button class="btn btn--primary" type="submit"><%= isAdmin ? 'Enroll' : 'Connect' %></button>
       <a class="btn" href="/">Cancel</a>
     </p>
   </form>
