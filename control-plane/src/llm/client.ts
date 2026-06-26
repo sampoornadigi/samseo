@@ -17,8 +17,13 @@ export interface LlmAnswer {
   citations?: string[];
 }
 
+export interface AskOptions {
+  /** Output token budget; defaults to 512 (enough for a citation answer). */
+  maxTokens?: number;
+}
+
 export interface LlmClient {
-  ask(prompt: string): Promise<LlmAnswer>;
+  ask(prompt: string, opts?: AskOptions): Promise<LlmAnswer>;
 }
 
 /** Deterministic, keyless, network-free client for tests/dev. */
@@ -37,7 +42,7 @@ export class AnthropicLlmClient implements LlmClient {
     private readonly model: string,
   ) {}
 
-  async ask(prompt: string): Promise<LlmAnswer> {
+  async ask(prompt: string, opts: AskOptions = {}): Promise<LlmAnswer> {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -47,7 +52,7 @@ export class AnthropicLlmClient implements LlmClient {
       },
       body: JSON.stringify({
         model: this.model,
-        max_tokens: 512,
+        max_tokens: opts.maxTokens ?? 512,
         messages: [{ role: 'user', content: prompt }],
       }),
       signal: AbortSignal.timeout(30000),
@@ -72,7 +77,7 @@ export class PerplexityLlmClient implements LlmClient {
     private readonly model: string,
   ) {}
 
-  async ask(prompt: string): Promise<LlmAnswer> {
+  async ask(prompt: string, opts: AskOptions = {}): Promise<LlmAnswer> {
     const res = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
@@ -81,7 +86,7 @@ export class PerplexityLlmClient implements LlmClient {
       },
       body: JSON.stringify({
         model: this.model,
-        max_tokens: 512,
+        max_tokens: opts.maxTokens ?? 512,
         messages: [{ role: 'user', content: prompt }],
       }),
       signal: AbortSignal.timeout(30000),
@@ -105,4 +110,20 @@ export function makeLlmClient(): LlmClient {
   if (config.perplexityKey) return new PerplexityLlmClient(config.perplexityKey, config.perplexityModel);
   if (config.llmKey) return new AnthropicLlmClient(config.llmKey, config.llmModel);
   return new StubLlmClient();
+}
+
+/**
+ * For analysis/reasoning tasks (e.g. explaining audit findings), prefer a
+ * reasoning model (Anthropic) over a web-search answer engine (Perplexity),
+ * falling back to the stub when nothing is keyed.
+ */
+export function makeReasoningClient(): LlmClient {
+  if (config.llmKey) return new AnthropicLlmClient(config.llmKey, config.llmModel);
+  if (config.perplexityKey) return new PerplexityLlmClient(config.perplexityKey, config.perplexityModel);
+  return new StubLlmClient();
+}
+
+/** True when a real (non-stub) model is configured. */
+export function hasLlm(): boolean {
+  return !!(config.llmKey || config.perplexityKey);
 }

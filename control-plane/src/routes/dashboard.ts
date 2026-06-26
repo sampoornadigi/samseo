@@ -18,6 +18,7 @@ import {
   listDeployments,
   setRolledBack,
 } from '../repo/pipeline.js';
+import { explainLatestAudit } from '../services/auditExplain.js';
 import { addPrompt, citationSummary, latestResults, listPrompts } from '../repo/citation.js';
 import { siteIdsForUsername, idForUsername, setUserSites } from '../repo/users.js';
 import { readSession } from '../auth/session.js';
@@ -215,6 +216,20 @@ export function registerDashboard(app: FastifyInstance): void {
       return reply.code(404).send({ error: 'site secret missing' });
     }
     await auditSite(site, secret);
+    return reply.redirect(`/sites/${site.id}`);
+  });
+
+  // Generate (or refresh) the AI plain-language explanation of the latest audit.
+  app.post('/sites/:id/audit/explain', async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
+    const id = Number(request.params.id);
+    const me = readSession(request);
+    const site = Number.isFinite(id) ? await getById(id) : null;
+    if (!site) return reply.code(404).send({ error: 'site not found' });
+    if (me && me.role === 'client') {
+      const allowed = new Set(await siteIdsForUsername(me.username));
+      if (!allowed.has(id)) return reply.code(403).send('Forbidden');
+    }
+    await explainLatestAudit(id, { force: true });
     return reply.redirect(`/sites/${site.id}`);
   });
 

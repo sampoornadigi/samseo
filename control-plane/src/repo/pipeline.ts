@@ -40,14 +40,23 @@ export async function saveAudit(siteId: number, findings: Finding[]): Promise<vo
   ]);
 }
 
+export interface AuditSummary {
+  headline: string;
+  actions: { title: string; why: string; fix: string; severity: string }[];
+}
+
 export async function latestAudit(
   siteId: number,
-): Promise<{ findings: Finding[]; captured_at: string } | null> {
-  const { rows } = await pool.query<{ findings: Finding[]; captured_at: string }>(
-    'SELECT findings, captured_at FROM audits WHERE site_id = $1 ORDER BY captured_at DESC LIMIT 1',
+): Promise<{ id: number; findings: Finding[]; captured_at: string; ai_summary: AuditSummary | null } | null> {
+  const { rows } = await pool.query<{ id: number; findings: Finding[]; captured_at: string; ai_summary: AuditSummary | null }>(
+    'SELECT id, findings, captured_at, ai_summary FROM audits WHERE site_id = $1 ORDER BY captured_at DESC LIMIT 1',
     [siteId],
   );
   return rows[0] ?? null;
+}
+
+export async function saveAuditSummary(auditId: number, summary: AuditSummary): Promise<void> {
+  await pool.query('UPDATE audits SET ai_summary = $2 WHERE id = $1', [auditId, JSON.stringify(summary)]);
 }
 
 export async function insertDeployment(

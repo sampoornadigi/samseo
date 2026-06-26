@@ -99,6 +99,32 @@
     <p class="muted">No audit findings yet. Run an audit to surface fixable SEO gaps.</p>
   <% } else { %>
     <p class="muted">Found <%= audit.findings.length %> fixable item(s) &middot; audited <%= new Date(audit.captured_at).toLocaleString() %>. Tick the ones to apply, then deploy.</p>
+
+    <% var sevcol = { high: '#c0392b', medium: '#b9770e', low: '#7f8c8d' }; %>
+    <div style="margin:0 0 16px;padding:14px 16px;background:#f6f8fb;border:1px solid #e6e9ef;border-radius:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <strong style="font-size:14px;">&#10024; AI fix plan</strong>
+        <form class="inline" method="post" action="/sites/<%= site.id %>/audit/explain" style="margin:0;">
+          <button class="btn" type="submit"><%= audit.ai_summary ? 'Refresh' : 'Explain with AI' %></button>
+        </form>
+      </div>
+      <% if (audit.ai_summary) { %>
+        <p style="margin:10px 0 10px;"><%= audit.ai_summary.headline %></p>
+        <ol style="margin:0;padding-left:18px;">
+          <% audit.ai_summary.actions.forEach(function (a) { %>
+            <li style="margin-bottom:9px;">
+              <strong><%= a.title %></strong>
+              <span style="font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:<%= sevcol[a.severity] || '#b9770e' %>;margin-left:6px;"><%= a.severity %></span>
+              <% if (a.why) { %><div class="muted" style="margin-top:2px;"><%= a.why %></div><% } %>
+              <% if (a.fix) { %><div style="margin-top:2px;">Fix: <%= a.fix %></div><% } %>
+            </li>
+          <% }); %>
+        </ol>
+      <% } else { %>
+        <p class="muted" style="margin:10px 0 0;">Get a prioritised, plain-language plan for these findings &mdash; what to fix first and why. Requires an AI model to be configured.</p>
+      <% } %>
+    </div>
+
     <form method="post" action="/sites/<%= site.id %>/deploy">
       <table>
         <thead>
