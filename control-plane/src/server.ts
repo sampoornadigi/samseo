@@ -26,6 +26,7 @@ import { getBranding } from './repo/settings.js';
 import { readSession } from './auth/session.js';
 import { startScheduler } from './scheduler.js';
 import { startEventSpine } from './platform/spine.js';
+import { exceedsRateLimit, clientIp } from './security/rate-limit.js';
 
 const viewsDir = join(dirname(fileURLToPath(import.meta.url)), 'views');
 
@@ -62,6 +63,12 @@ export async function build() {
   // state-changing request (non-GET) needs the admin role (viewers are read-only).
   app.addHook('onRequest', async (request, reply) => {
     const path = request.url.split('?')[0];
+    // Brute-force protection on the password login (the only guessable surface).
+    if (request.method === 'POST' && path === '/login') {
+      if (await exceedsRateLimit('login', clientIp(request.headers, request.ip), 10)) {
+        return reply.code(429).send('Too many attempts. Please wait a minute and try again.');
+      }
+    }
     if (PUBLIC_PATHS.has(path)) {
       return;
     }
