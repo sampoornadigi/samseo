@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest';
 import { resolveSeoSso, crmRoleToCpRole, clientUsername, SsoDenied } from './sso-user.js';
 
-function fakeDeps(seed: { sites?: Record<string, number[]> } = {}) {
+function fakeDeps(seed: { sites?: Record<string, number[]>; revoked?: Set<string> } = {}) {
   const users = new Map<string, number>();
   let nextId = 1;
   const calls = { ensureUser: [] as Array<{ username: string; role: string }>, setUserSites: [] as Array<{ userId: number; siteIds: number[] }> };
@@ -18,6 +18,9 @@ function fakeDeps(seed: { sites?: Record<string, number[]> } = {}) {
     },
     async setUserSites(userId: number, siteIds: number[]) {
       calls.setUserSites.push({ userId, siteIds });
+    },
+    async isTenantRevoked(tid: string) {
+      return seed.revoked?.has(tid) ?? false;
     },
   };
   return { deps, calls };
@@ -72,4 +75,11 @@ test('denies a client token with no tenant', async () => {
 test('denies an unknown role', async () => {
   const { deps } = fakeDeps();
   await expect(resolveSeoSso({ role: 'whatever' }, deps)).rejects.toBeInstanceOf(SsoDenied);
+});
+
+test('denies a client whose tenant SSO has been revoked (suspended/archived)', async () => {
+  const { deps } = fakeDeps({ revoked: new Set(['ten_a']) });
+  await expect(
+    resolveSeoSso({ role: 'client_admin', tenantId: 'ten_a', entitlements: ['seo'] }, deps),
+  ).rejects.toBeInstanceOf(SsoDenied);
 });
