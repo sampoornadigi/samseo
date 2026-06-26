@@ -57,8 +57,8 @@ export function registerLead(app: FastifyInstance): void {
 
     // Resolve the site's platform tenant (Phase 1 mapping). If unmapped, accept
     // the request but don't route — never fail the visitor's form submission.
-    const { rows } = await pool.query<{ id: number; platform_tenant_id: string | null }>(
-      'SELECT id, platform_tenant_id FROM sites WHERE key_id = $1',
+    const { rows } = await pool.query<{ id: number; platform_tenant_id: string | null; site_url: string | null; label: string | null }>(
+      'SELECT id, platform_tenant_id, site_url, label FROM sites WHERE key_id = $1',
       [keyId],
     );
     const site = rows[0];
@@ -84,6 +84,9 @@ export function registerLead(app: FastifyInstance): void {
           fbclid: b.fbclid,
           landingPage: b.landingPage,
           referrer: b.referrer,
+          // The SEO site the lead came from — lets the CRM record the origin in
+          // the identity graph (cross-product "which site brings leads").
+          site: site.label || site.site_url || `site-${site.id}`,
         }),
       ],
     );
