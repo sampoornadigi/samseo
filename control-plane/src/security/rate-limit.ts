@@ -47,8 +47,15 @@ export async function exceedsRateLimit(bucket: string, id: string, max: number, 
   }
 }
 
-/** Best-effort client IP behind nginx (X-Real-IP at the edge), else first XFF hop. */
+/**
+ * Real client IP. seo.sampoornadigi.in is behind Cloudflare, so nginx's X-Real-IP
+ * ($remote_addr) is the rotating Cloudflare edge IP — prefer CF-Connecting-IP
+ * (the authoritative visitor IP, overwritten by Cloudflare so not spoofable).
+ * Falls back to X-Real-IP (correct when not behind Cloudflare), then first XFF hop.
+ */
 export function clientIp(headers: Record<string, unknown>, fallback?: string): string {
+  const cf = headers['cf-connecting-ip'];
+  if (typeof cf === 'string' && cf.trim()) return cf.trim();
   const xr = headers['x-real-ip'];
   if (typeof xr === 'string' && xr.trim()) return xr.trim();
   const xff = headers['x-forwarded-for'];
