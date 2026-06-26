@@ -13,7 +13,11 @@
   </div>
 
   <% if (sites.length === 0) { %>
-    <p class="muted">No sites yet. Enroll one by pasting its key id and secret from the WordPress “Control plane” settings.</p>
+    <% if (isAdmin) { %>
+      <p class="muted">No sites yet. Enroll one by pasting its key id and secret from the WordPress “Control plane” settings.</p>
+    <% } else { %>
+      <p class="muted">No SEO sites are connected to your account yet. Please contact your agency to connect your website, then your search performance will appear here.</p>
+    <% } %>
   <% } else { %>
     <% if (isAdmin) { %>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:10px 12px;background:#f6f7f7;border:1px solid var(--line);border-radius:6px;">
