@@ -16,6 +16,7 @@ import { resolveSeoSso, SsoDenied } from './sso-user.js';
 import { createUser, idForUsername, setUserSites } from '../repo/users.js';
 import { siteIdsForTenant } from '../repo/sites.js';
 import { hashPassword } from '../crypto/password.js';
+import { isTenantRevoked } from '../platform/sso-revocation.js';
 
 const SSO_COOKIE = 'smp_sso';
 
@@ -50,6 +51,7 @@ export function registerSso(app: FastifyInstance): void {
         idForUsername,
         siteIdsForTenant,
         setUserSites,
+        isTenantRevoked,
       });
       setSessionCookie(reply, makeToken(username, role));
       return reply.redirect('/');

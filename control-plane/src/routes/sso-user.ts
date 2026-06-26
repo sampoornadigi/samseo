@@ -33,6 +33,8 @@ export interface SeoSsoDeps {
   idForUsername(username: string): Promise<number | null>;
   siteIdsForTenant(platformTenantId: string): Promise<number[]>;
   setUserSites(userId: number, siteIds: number[]): Promise<void>;
+  /** True if the CRM has revoked SSO for this tenant (suspended/archived). */
+  isTenantRevoked(tenantId: string): Promise<boolean>;
 }
 
 /** CRM platform role → control-plane role. null = not an admittable role. */
@@ -66,6 +68,10 @@ export async function resolveSeoSso(
   }
   if (!principal.tenantId) {
     throw new SsoDenied(403, 'SEO could not identify your account.');
+  }
+  // A still-valid token must not outlive the tenant's active status.
+  if (await deps.isTenantRevoked(principal.tenantId)) {
+    throw new SsoDenied(403, 'This account is not active. Please contact your agency.');
   }
 
   const username = clientUsername(principal.tenantId);
