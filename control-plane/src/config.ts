@@ -24,6 +24,11 @@ export const config = {
   llmKey: process.env.CP_LLM_KEY ?? '',
   /** Model for the citation sampler. */
   llmModel: process.env.CP_LLM_MODEL ?? 'claude-haiku-4-5',
+  /** Perplexity API key — a real answer engine (web search + source citations);
+   *  preferred over Anthropic for citation sampling when set. */
+  perplexityKey: process.env.CP_PERPLEXITY_KEY ?? '',
+  /** Perplexity model for the citation sampler. */
+  perplexityModel: process.env.CP_PERPLEXITY_MODEL ?? 'sonar',
   /** Secret for signing session cookies (falls back to the vault key). */
   sessionSecret: process.env.CP_SESSION_SECRET ?? required('CP_VAULT_KEY'),
   /** Username for the auto-seeded initial admin. */
