@@ -41,7 +41,7 @@
         <a href="/">Sites</a>
         <% if (user.role !== 'client') { %> &middot; <a href="/templates">Templates</a><% } %>
         <% if (user.role === 'admin') { %> &middot; <a href="/users">Users</a> &middot; <a href="/settings">Settings</a><% } %>
-        &middot; <span style="color:rgba(255,255,255,.72);"><%= user.username %> (<%= user.role %>)</span>
+        &middot; <span style="color:rgba(255,255,255,.72);"><%= user.role === 'client' ? 'Your account' : user.username %> (<%= user.role %>)</span>
         &middot;
         <form class="inline" method="post" action="/logout" style="display:inline;">
           <button type="submit" style="background:none;border:0;color:var(--gold);cursor:pointer;font:inherit;padding:0;text-decoration:underline;">Log out</button>
