@@ -44,8 +44,17 @@ export function crmRoleToCpRole(role?: string): 'admin' | 'client' | null {
   return null;
 }
 
+const CLIENT_USERNAME_PREFIX = 'platform-tenant-';
+
 export function clientUsername(tenantId: string): string {
-  return `platform-tenant-${tenantId}`;
+  return `${CLIENT_USERNAME_PREFIX}${tenantId}`;
+}
+
+/** The platform tenant id embedded in a client cp_user's username, or null. */
+export function tenantIdFromClientUsername(username: string): string | null {
+  return username.startsWith(CLIENT_USERNAME_PREFIX)
+    ? username.slice(CLIENT_USERNAME_PREFIX.length) || null
+    : null;
 }
 
 /** Returns the { username, role } to mint a session for; provisions client scope. */

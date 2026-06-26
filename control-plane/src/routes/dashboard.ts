@@ -5,8 +5,9 @@
 
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { enroll, getById, list, secretFor, setSiteTenant } from '../repo/sites.js';
+import { enroll, getById, list, secretFor, setSiteTenant, siteIdsForTenant } from '../repo/sites.js';
 import { listCrmTenants } from '../platform/crmTenants.js';
+import { tenantIdFromClientUsername } from './sso-user.js';
 import { deploy, rollback, runAction } from '../client/siteClient.js';
 import { latestForSite, latestOverallBySite, snapshotCount } from '../repo/metrics.js';
 import {
@@ -18,7 +19,7 @@ import {
   setRolledBack,
 } from '../repo/pipeline.js';
 import { addPrompt, citationSummary, latestResults, listPrompts } from '../repo/citation.js';
-import { siteIdsForUsername } from '../repo/users.js';
+import { siteIdsForUsername, idForUsername, setUserSites } from '../repo/users.js';
 import { readSession } from '../auth/session.js';
 import { refreshAllSites, refreshSite } from '../services/refresh.js';
 import { auditSite } from '../services/audit.js';
@@ -85,7 +86,10 @@ export function registerDashboard(app: FastifyInstance): void {
   });
 
   app.get('/sites/new', async (request, reply) => {
-    return reply.view('new-site.ejs', { title: 'Enroll site', user: readSession(request), error: '', clients: await listCrmTenants() });
+    const me = readSession(request);
+    // Only admins pick a client; a self-enrolling client is pinned to their own tenant.
+    const clients = me?.role === 'admin' ? await listCrmTenants() : [];
+    return reply.view('new-site.ejs', { title: 'Enroll site', user: me, error: '', clients });
   });
 
   app.post('/sites', async (request: FastifyRequest<{ Body: EnrollForm }>, reply) => {
@@ -103,9 +107,20 @@ export function registerDashboard(app: FastifyInstance): void {
       });
     }
 
-    const platformTenantId = (body.platform_tenant_id ?? '').trim() || null;
+    // Admins may map to any client; a client self-enrolling is PINNED to their own
+    // tenant (from the session), so they can only connect a site to their own account.
+    const session = readSession(request);
+    const platformTenantId = session?.role === 'client'
+      ? tenantIdFromClientUsername(session.username)
+      : (body.platform_tenant_id ?? '').trim() || null;
     try {
       await enroll({ label, reachUrl, keyId, secret, platformTenantId });
+      // A self-enrolling client: refresh their site scope so the new site shows
+      // immediately (cp_user_sites is otherwise only set at SSO login).
+      if (session?.role === 'client' && platformTenantId) {
+        const uid = await idForUsername(session.username);
+        if (uid != null) await setUserSites(uid, await siteIdsForTenant(platformTenantId));
+      }
     } catch (err) {
       const msg = err instanceof Error && /unique/i.test(err.message)
         ? 'A site with that key id is already enrolled.'
