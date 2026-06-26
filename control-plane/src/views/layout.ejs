@@ -29,26 +29,49 @@
     label { display:block; font-weight:600; margin:12px 0 4px; }
     input[type=text] { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:5px; font:inherit; }
     code { background:#f0f0f1; padding:1px 5px; border-radius:3px; }
+    /* Unified platform bar (shared look across CRM / SEO / Ads) */
+    .hdr-left { display:flex; align-items:center; gap:22px; flex-wrap:wrap; }
+    .hdr-brand { font-weight:700; font-size:16px; font-family:'Space Grotesk',sans-serif; letter-spacing:-.01em; white-space:nowrap; }
+    .hdr-brand .hdr-sub { color:rgba(255,255,255,.6); font-weight:500; font-size:.78em; padding-left:11px; margin-left:3px; border-left:1px solid rgba(255,255,255,.2); }
+    .xprod-nav { display:flex; gap:4px; }
+    .xprod-nav a { color:#cdd6e4; text-decoration:none; padding:6px 12px; border-radius:7px; font-size:14px; font-weight:500; }
+    .xprod-nav a:hover { background:rgba(255,255,255,.08); color:#fff; }
+    .xprod-nav a.active { background:rgba(255,200,61,.14); color:var(--gold); font-weight:600; }
+    .hdr-right { display:flex; align-items:center; gap:12px; white-space:nowrap; }
+    .subnav { background:#222c3d; border-bottom:1px solid #2e3a4f; padding:9px 24px; display:flex; gap:16px; }
+    .subnav a { color:#aab6c8; text-decoration:none; font-size:13px; }
+    .subnav a:hover { color:#fff; }
   </style>
 </head>
 <body>
   <header>
-    <h1>
-      <% if (b.logo) { %><img src="<%= b.logo %>" alt="<%= b.name %>" style="height:24px;vertical-align:middle;"><% } else { %><%= b.name %><% } %>
-    </h1>
-    <nav>
+    <div class="hdr-left">
+      <span class="hdr-brand">Sampoorna <span class="hdr-sub">Growth Platform</span></span>
       <% if (typeof user !== 'undefined' && user) { %>
-        <a href="/">Sites</a>
-        <% if (user.role !== 'client') { %> &middot; <a href="/templates">Templates</a><% } %>
-        <% if (user.role === 'admin') { %> &middot; <a href="/users">Users</a> &middot; <a href="/settings">Settings</a><% } %>
-        &middot; <span style="color:rgba(255,255,255,.72);"><%= user.role === 'client' ? 'Your account' : user.username %> (<%= user.role %>)</span>
-        &middot;
-        <form class="inline" method="post" action="/logout" style="display:inline;">
-          <button type="submit" style="background:none;border:0;color:var(--gold);cursor:pointer;font:inherit;padding:0;text-decoration:underline;">Log out</button>
-        </form>
+      <nav class="xprod-nav">
+        <a href="https://app.sampoornadigi.in">CRM</a>
+        <a href="https://seo.sampoornadigi.in" class="active">SEO</a>
+        <a href="https://platform.sampoornadigi.in">Ads</a>
+        <a href="https://app.sampoornadigi.in/?view=billing">Billing</a>
+      </nav>
       <% } %>
-    </nav>
+    </div>
+    <% if (typeof user !== 'undefined' && user) { %>
+    <div class="hdr-right">
+      <span style="color:rgba(255,255,255,.72);font-size:13px;"><%= user.role === 'client' ? 'Your account' : user.username %></span>
+      <form class="inline" method="post" action="/logout" style="display:inline;">
+        <button type="submit" style="background:none;border:0;color:var(--gold);cursor:pointer;font:inherit;padding:0;text-decoration:underline;">Sign out</button>
+      </form>
+    </div>
+    <% } %>
   </header>
+  <% if (typeof user !== 'undefined' && user) { %>
+  <div class="subnav">
+    <a href="/">Sites</a>
+    <% if (user.role !== 'client') { %><a href="/templates">Templates</a><% } %>
+    <% if (user.role === 'admin') { %><a href="/users">Users</a><a href="/settings">Settings</a><% } %>
+  </div>
+  <% } %>
   <main><%- body %></main>
   <% if (b.supportUrl) { %><footer style="max-width:1000px;margin:24px auto;padding:0 24px;color:var(--muted);font-size:12px;">Need help? <a href="<%= b.supportUrl %>" style="color:var(--accent);">Contact support</a></footer><% } %>
 
