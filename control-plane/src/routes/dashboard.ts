@@ -19,6 +19,7 @@ import {
   setRolledBack,
 } from '../repo/pipeline.js';
 import { explainLatestAudit } from '../services/auditExplain.js';
+import { generateAeo } from '../services/aeoGenerate.js';
 import { addPrompt, citationSummary, latestResults, listPrompts } from '../repo/citation.js';
 import { siteIdsForUsername, idForUsername, setUserSites } from '../repo/users.js';
 import { readSession } from '../auth/session.js';
@@ -231,6 +232,36 @@ export function registerDashboard(app: FastifyInstance): void {
     }
     await explainLatestAudit(id, { force: true });
     return reply.redirect(`/sites/${site.id}`);
+  });
+
+  // AEO/GEO content generator: form (GET) + generate (POST), rendered on one page.
+  async function aeoGuard(request: FastifyRequest<{ Params: { id: string } }>, reply: import('fastify').FastifyReply) {
+    const id = Number(request.params.id);
+    const me = readSession(request);
+    const site = Number.isFinite(id) ? await getById(id) : null;
+    if (!site) { reply.code(404).send({ error: 'site not found' }); return null; }
+    if (me && me.role === 'client') {
+      const allowed = new Set(await siteIdsForUsername(me.username));
+      if (!allowed.has(id)) { reply.code(403).send('Forbidden'); return null; }
+    }
+    return { site, me };
+  }
+
+  app.get('/sites/:id/aeo', async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
+    const ctx = await aeoGuard(request, reply);
+    if (!ctx) return reply;
+    return reply.view('aeo.ejs', { title: 'AI search content', user: ctx.me, site: ctx.site, result: null, form: {}, attempted: false });
+  });
+
+  app.post('/sites/:id/aeo', async (request: FastifyRequest<{ Params: { id: string }; Body: { topic?: string; url?: string; notes?: string } }>, reply) => {
+    const ctx = await aeoGuard(request, reply);
+    if (!ctx) return reply;
+    const b = request.body ?? {};
+    const form = { topic: (b.topic ?? '').trim(), url: (b.url ?? '').trim(), notes: (b.notes ?? '').trim() };
+    const result = form.topic
+      ? await generateAeo({ ...form, siteLabel: ctx.site.label || ctx.site.site_url })
+      : null;
+    return reply.view('aeo.ejs', { title: 'AI search content', user: ctx.me, site: ctx.site, result, form, attempted: !!form.topic });
   });
 
   app.post(

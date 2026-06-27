@@ -4,6 +4,7 @@
     <a class="btn" href="/">&larr; All sites</a>
   </div>
   <p class="muted" style="margin-top:0;"><%= site.site_url || site.reach_url %> &middot; <code><%= site.key_id %></code></p>
+  <p style="margin:0 0 4px;"><a class="btn" href="/sites/<%= site.id %>/aeo">&#10024; Generate AI search content</a></p>
 
   <% if (user && user.role === 'admin') { %>
     <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin:6px 0 16px;">

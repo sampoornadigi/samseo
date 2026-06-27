@@ -1,0 +1,71 @@
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+    <h2 style="margin:0;font-size:15px;">AI search content &mdash; <%= site.label || site.site_url || site.key_id %></h2>
+    <a class="btn" href="/sites/<%= site.id %>">&larr; Back to site</a>
+  </div>
+  <p class="muted" style="margin-top:0;">Generate the assets that get a page cited by AI answer engines (Google AI Overviews, ChatGPT, Perplexity): a quotable answer block, an FAQ set, and valid JSON-LD schema (FAQPage / Article / HowTo). Paste them into the page or your SEO plugin&rsquo;s schema box.</p>
+
+  <form method="post" action="/sites/<%= site.id %>/aeo" style="max-width:760px;">
+    <div class="form-group" style="margin-bottom:12px;">
+      <label for="topic">Page topic or target question <span class="muted">(required)</span></label>
+      <input type="text" id="topic" name="topic" required value="<%= (form && form.topic) || '' %>" placeholder="e.g. modular kitchen cost in Bangalore" style="width:100%;">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label for="url">Page URL <span class="muted">(optional &mdash; used in the Article schema)</span></label>
+      <input type="text" id="url" name="url" value="<%= (form && form.url) || '' %>" placeholder="https://&hellip;" style="width:100%;">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label for="notes">Key points to include <span class="muted">(optional)</span></label>
+      <textarea id="notes" name="notes" rows="3" placeholder="Anything specific the answer should mention&hellip;" style="width:100%;"><%= (form && form.notes) || '' %></textarea>
+    </div>
+    <button class="btn btn--primary" type="submit">Generate</button>
+  </form>
+
+  <% if (attempted && !result) { %>
+    <div class="alert alert-info" style="margin-top:16px;">Couldn&rsquo;t generate content. Make sure an AI model is configured (CP_LLM_KEY), then try again.</div>
+  <% } %>
+</div>
+
+<% if (result) { %>
+  <div class="card" style="margin-top:18px;">
+    <h2 style="margin:0 0 4px;font-size:15px;">Answer block</h2>
+    <p class="muted" style="margin-top:0;">A direct, quotable answer &mdash; place it near the top of the page.</p>
+    <pre style="white-space:pre-wrap;background:#f6f8fb;border:1px solid #e6e9ef;border-radius:8px;padding:12px 14px;margin:0;"><%= result.answerBlock %></pre>
+  </div>
+
+  <% if (result.faqs && result.faqs.length) { %>
+    <div class="card" style="margin-top:18px;">
+      <h2 style="margin:0 0 10px;font-size:15px;">FAQ (<%= result.faqs.length %>)</h2>
+      <% result.faqs.forEach(function (f) { %>
+        <div style="margin-bottom:12px;">
+          <div style="font-weight:600;"><%= f.q %></div>
+          <div class="muted" style="margin-top:2px;"><%= f.a %></div>
+        </div>
+      <% }); %>
+    </div>
+  <% } %>
+
+  <div class="card" style="margin-top:18px;">
+    <h2 style="margin:0 0 4px;font-size:15px;">Schema markup (JSON-LD)</h2>
+    <p class="muted" style="margin-top:0;">Valid, ready to paste. Add to the page &lt;head&gt; or your SEO plugin&rsquo;s custom-schema field.</p>
+
+    <% if (result.jsonLd.faq) { %>
+      <h3 style="font-size:13px;margin:14px 0 4px;">FAQPage</h3>
+      <pre style="overflow:auto;background:#0f172a;color:#e2e8f0;border-radius:8px;padding:12px 14px;margin:0;font-size:12px;line-height:1.5;"><code>&lt;script type="application/ld+json"&gt;
+<%= JSON.stringify(result.jsonLd.faq, null, 2) %>
+&lt;/script&gt;</code></pre>
+    <% } %>
+
+    <h3 style="font-size:13px;margin:14px 0 4px;">Article</h3>
+    <pre style="overflow:auto;background:#0f172a;color:#e2e8f0;border-radius:8px;padding:12px 14px;margin:0;font-size:12px;line-height:1.5;"><code>&lt;script type="application/ld+json"&gt;
+<%= JSON.stringify(result.jsonLd.article, null, 2) %>
+&lt;/script&gt;</code></pre>
+
+    <% if (result.jsonLd.howto) { %>
+      <h3 style="font-size:13px;margin:14px 0 4px;">HowTo</h3>
+      <pre style="overflow:auto;background:#0f172a;color:#e2e8f0;border-radius:8px;padding:12px 14px;margin:0;font-size:12px;line-height:1.5;"><code>&lt;script type="application/ld+json"&gt;
+<%= JSON.stringify(result.jsonLd.howto, null, 2) %>
+&lt;/script&gt;</code></pre>
+    <% } %>
+  </div>
+<% } %>
