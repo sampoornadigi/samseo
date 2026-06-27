@@ -26,6 +26,10 @@
   <% } %>
 </div>
 
+<% if (typeof deployMsg !== 'undefined' && deployMsg) { %>
+  <div class="card" style="margin-top:18px;"><div class="alert alert-info" style="margin:0;"><%= deployMsg %></div></div>
+<% } %>
+
 <% if (result) { %>
   <div class="card" style="margin-top:18px;">
     <h2 style="margin:0 0 4px;font-size:15px;">Answer block</h2>
@@ -67,5 +71,14 @@
 <%= JSON.stringify(result.jsonLd.howto, null, 2) %>
 &lt;/script&gt;</code></pre>
     <% } %>
+
+    <% var nodes = [result.jsonLd.faq, result.jsonLd.article, result.jsonLd.howto].filter(Boolean); %>
+    <form method="post" action="/sites/<%= site.id %>/aeo/deploy" style="margin-top:16px;border-top:1px solid #e6e9ef;padding-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input type="hidden" name="jsonld" value="<%= JSON.stringify(nodes) %>">
+      <label class="muted" style="font-size:13px;">Deploy to WordPress post ID:</label>
+      <input type="number" name="post_id" min="1" required placeholder="123" style="width:90px;padding:8px 10px;border:1px solid #ccc;border-radius:8px;">
+      <button class="btn btn--primary" type="submit">&#128640; Deploy schema to this post</button>
+    </form>
+    <p class="muted" style="margin:8px 0 0;font-size:12px;">Pushes this JSON-LD to that post and folds it into your site&rsquo;s connected schema graph &mdash; no copy-paste. Reversible from the site&rsquo;s Deployments. Requires plugin v0.5.0+.</p>
   </div>
 <% } %>

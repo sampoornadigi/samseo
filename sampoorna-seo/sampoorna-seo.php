@@ -3,7 +3,7 @@
  * Plugin Name:       Sampoorna SEO
  * Plugin URI:        https://sampoornadigi.com/sampoorna-seo
  * Description:        The one Sampoorna plugin for your site: SEO (meta, schema, GEO/AEO, sitemaps), Google Search Console tracking + fixes, lead capture to the CRM, and — wired automatically by the platform — AdSync first-party analytics and the CRM AI chat widget. One install lights up the whole stack.
- * Version:           0.4.0
+ * Version:           0.5.0
  * Requires at least: 6.0
  * Requires PHP:      8.1
  * Author:            LSN Soft
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // No direct access.
 }
 
-define( 'SAMPOORNA_SEO_VERSION', '0.4.0' );
+define( 'SAMPOORNA_SEO_VERSION', '0.5.0' );
 define( 'SAMPOORNA_SEO_FILE', __FILE__ );
 define( 'SAMPOORNA_SEO_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SAMPOORNA_SEO_URL', plugin_dir_url( __FILE__ ) );
@@ -94,6 +94,7 @@ function sampoorna_seo_init() {
 	\Sampoorna\SEO\Schema\HowTo::instance();
 	\Sampoorna\SEO\Schema\Product::instance();
 	\Sampoorna\SEO\Schema\LocalBusiness::instance();
+	\Sampoorna\SEO\Schema\Custom::instance(); // AEO/GEO JSON-LD deployed per post
 
 	\Sampoorna\SEO\Integrations\GSC\OAuth::instance();
 	\Sampoorna\SEO\Integrations\GSC\Sync::instance();

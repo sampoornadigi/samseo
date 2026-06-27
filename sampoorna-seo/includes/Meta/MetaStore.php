@@ -19,15 +19,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class MetaStore {
 
-	const KEY_TITLE     = '_sampoorna_seo_title';
-	const KEY_DESC      = '_sampoorna_seo_desc';
-	const KEY_CANONICAL = '_sampoorna_seo_canonical';
-	const KEY_NOINDEX   = '_sampoorna_seo_robots_noindex';
-	const KEY_NOFOLLOW  = '_sampoorna_seo_robots_nofollow';
-	const KEY_OG_TITLE  = '_sampoorna_seo_og_title';
-	const KEY_OG_DESC   = '_sampoorna_seo_og_desc';
-	const KEY_OG_IMAGE  = '_sampoorna_seo_og_image';
-	const KEY_FOCUS_KW  = '_sampoorna_seo_focus_keyword';
+	const KEY_TITLE         = '_sampoorna_seo_title';
+	const KEY_DESC          = '_sampoorna_seo_desc';
+	const KEY_CANONICAL     = '_sampoorna_seo_canonical';
+	const KEY_NOINDEX       = '_sampoorna_seo_robots_noindex';
+	const KEY_NOFOLLOW      = '_sampoorna_seo_robots_nofollow';
+	const KEY_OG_TITLE      = '_sampoorna_seo_og_title';
+	const KEY_OG_DESC       = '_sampoorna_seo_og_desc';
+	const KEY_OG_IMAGE      = '_sampoorna_seo_og_image';
+	const KEY_FOCUS_KW      = '_sampoorna_seo_focus_keyword';
+	const KEY_SCHEMA_JSONLD = '_sampoorna_seo_schema_jsonld';
 
 	/**
 	 * Singleton instance.
@@ -71,6 +72,7 @@ class MetaStore {
 			'og_desc'         => self::KEY_OG_DESC,
 			'og_image'        => self::KEY_OG_IMAGE,
 			'focus_keyword'   => self::KEY_FOCUS_KW,
+			'schema_jsonld'   => self::KEY_SCHEMA_JSONLD,
 		);
 	}
 
@@ -117,6 +119,11 @@ class MetaStore {
 			case 'canonical':
 			case 'og_image':
 				return esc_url_raw( (string) $value );
+			case 'schema_jsonld':
+				// AEO/GEO JSON-LD nodes pushed from the control plane: validate it's
+				// JSON (an array of nodes) and store it compact; reject anything else.
+				$decoded = json_decode( (string) $value, true );
+				return is_array( $decoded ) ? (string) wp_json_encode( $decoded ) : '';
 			default:
 				return sanitize_text_field( (string) $value );
 		}

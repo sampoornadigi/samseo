@@ -274,6 +274,33 @@ export function registerDashboard(app: FastifyInstance): void {
     return reply.view('aeo.ejs', { title: 'AI search content', user: ctx.me, site: ctx.site, result, form, attempted: !!form.topic });
   });
 
+  // Deploy generated JSON-LD to a specific post via the signed /apply path.
+  app.post('/sites/:id/aeo/deploy', async (request: FastifyRequest<{ Params: { id: string }; Body: { post_id?: string; jsonld?: string } }>, reply) => {
+    const ctx = await aeoGuard(request, reply);
+    if (!ctx) return reply;
+    const b = request.body ?? {};
+    const postId = Number(b.post_id);
+    let nodes: unknown = null;
+    try { nodes = JSON.parse(b.jsonld ?? '[]'); } catch { nodes = null; }
+    const view = (deployMsg: string) =>
+      reply.view('aeo.ejs', { title: 'AI search content', user: ctx.me, site: ctx.site, result: null, form: {}, attempted: false, deployMsg });
+
+    if (!Number.isInteger(postId) || postId <= 0 || !Array.isArray(nodes) || nodes.length === 0) {
+      return view('Enter a valid WordPress post ID and generate schema first.');
+    }
+    const secret = await secretFor(ctx.site.key_id);
+    if (secret === null) return view('This site has no shared secret configured.');
+
+    const deployId = `d_${randomUUID()}`;
+    const changes = [{ type: 'post', id: postId, field: 'schema_jsonld', value: JSON.stringify(nodes) }];
+    const res = await deploy(ctx.site, secret, deployId, changes);
+    if (res.ok) {
+      await insertDeployment(ctx.site.id, deployId, changes, res.data);
+      return view(`✅ Schema deployed to post #${postId}. You can roll it back from the site’s Deployments.`);
+    }
+    return view(`Deploy failed: ${res.error ?? `the site returned ${res.status}`}. (The site’s plugin must be v0.5.0+.)`);
+  });
+
   // Re-push the tenant's platform embed keys (chat widget / analytics) to the site.
   app.post('/sites/:id/provision', async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
     const ctx = await aeoGuard(request, reply);
