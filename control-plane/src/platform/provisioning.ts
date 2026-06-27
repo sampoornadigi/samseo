@@ -1,12 +1,13 @@
 /**
  * Auto-provisioning: when a site is enrolled + mapped to a CRM tenant, fetch that
  * tenant's platform embed keys and push them to the WordPress site so the single
- * Sampoorna plugin lights up the CRM chat widget (and, once AdSync exposes it, the
- * analytics SDK) with no manual key-pasting.
+ * Sampoorna plugin lights up the CRM chat widget AND the AdSync analytics SDK with
+ * no manual key-pasting.
  *
- * Reuses the same service-token M2M channel as billing (PLATFORM_BILLING_URL +
- * PLATFORM_SERVICE_TOKEN, role ai_system). Best-effort: a missing token, an
- * unreachable site, or an old plugin (which ignores unknown option fields) all
+ * Keys come from each product's M2M endpoint, over the same service-token channel
+ * (role ai_system): the CRM (PLATFORM_BILLING_URL) returns the widget key, AdSync
+ * (PLATFORM_ADSYNC_URL) the analytics key. Best-effort: a missing URL/token, an
+ * unreachable service, or an old plugin (which ignores unknown option fields) all
  * degrade quietly — enrollment still succeeds.
  */
 
@@ -16,29 +17,40 @@ import type { Site } from '../repo/sites.js';
 import type { Change } from '../repo/pipeline.js';
 
 interface ProvisioningKeys {
-  widgetKey?: string | null;
-  analyticsKey?: string | null;
+  widgetKey: string | null;
+  analyticsKey: string | null;
 }
 
-/** Fetch a tenant's client-side embed keys from the CRM platform endpoint. */
-async function fetchKeys(tenantId: string): Promise<ProvisioningKeys | null> {
-  const base = process.env.PLATFORM_BILLING_URL;
+/** Signed-with-service-token GET to a product's /platform/provisioning/:tenantId. */
+async function fetchKey<T extends Record<string, unknown>>(
+  baseEnv: string | undefined,
+  tenantId: string,
+  label: string,
+): Promise<T | null> {
   const token = process.env.PLATFORM_SERVICE_TOKEN;
-  if (!base || !token) return null;
+  if (!baseEnv || !token) return null;
   try {
-    const res = await fetch(`${base.replace(/\/$/, '')}/platform/provisioning/${encodeURIComponent(tenantId)}`, {
+    const res = await fetch(`${baseEnv.replace(/\/$/, '')}/platform/provisioning/${encodeURIComponent(tenantId)}`, {
       headers: { authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
-      console.error(`[provisioning] CRM fetch failed (${res.status})`);
+      console.error(`[provisioning] ${label} fetch failed (${res.status})`);
       return null;
     }
-    return (await res.json()) as ProvisioningKeys;
+    return (await res.json()) as T;
   } catch (err) {
-    console.error('[provisioning] CRM fetch error', err instanceof Error ? err.message : String(err));
+    console.error(`[provisioning] ${label} fetch error`, err instanceof Error ? err.message : String(err));
     return null;
   }
+}
+
+async function fetchKeys(tenantId: string): Promise<ProvisioningKeys> {
+  const [crm, ads] = await Promise.all([
+    fetchKey<{ widgetKey?: string | null }>(process.env.PLATFORM_BILLING_URL, tenantId, 'CRM'),
+    fetchKey<{ analyticsKey?: string | null }>(process.env.PLATFORM_ADSYNC_URL, tenantId, 'AdSync'),
+  ]);
+  return { widgetKey: crm?.widgetKey ?? null, analyticsKey: ads?.analyticsKey ?? null };
 }
 
 /**
@@ -52,7 +64,6 @@ export async function provisionSite(
 ): Promise<{ ok: boolean; pushed: string[]; error?: string }> {
   if (!tenantId) return { ok: false, pushed: [], error: 'site is not mapped to a tenant' };
   const keys = await fetchKeys(tenantId);
-  if (!keys) return { ok: false, pushed: [], error: 'no provisioning keys available' };
 
   const changes: Change[] = [];
   if (keys.widgetKey) changes.push({ type: 'option', id: 0, field: 'widget_key', value: keys.widgetKey });
