@@ -302,7 +302,7 @@ class Handshake {
 			'modules'        => array(
 				'meta'              => true,
 				'gsc_connected'     => \Sampoorna\SEO\Integrations\GSC\OAuth::instance()->is_connected(),
-				'gsc_opportunities' => true, // exposes GET /gsc/opportunities (plugin >= 0.2.0)
+				'gsc_opportunities' => true, // Exposes GET /gsc/opportunities (plugin 0.2.0+).
 			),
 			'time'           => time(),
 		);

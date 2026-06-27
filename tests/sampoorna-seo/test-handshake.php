@@ -14,6 +14,7 @@ class Sampoorna_Seo_Handshake_Test extends WP_UnitTestCase {
 
 	const STATUS_ROUTE    = '/sampoorna-seo/v1/status';
 	const HANDSHAKE_ROUTE = '/sampoorna-seo/v1/handshake';
+	const GSC_ROUTE       = '/sampoorna-seo/v1/gsc/opportunities';
 
 	public function set_up() {
 		parent::set_up();
@@ -97,6 +98,22 @@ class Sampoorna_Seo_Handshake_Test extends WP_UnitTestCase {
 		$req->set_header( 'X-Sampoorna-Signature', $sig );
 		$tampered = rest_get_server()->dispatch( $req );
 		$this->assertSame( 401, $tampered->get_status() );
+	}
+
+	public function test_gsc_opportunities_signed_returns_shape() {
+		$response = $this->dispatch_signed( 'GET', self::GSC_ROUTE );
+		$this->assertSame( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		// No GSC property selected in the test env → connected false, empty buckets.
+		$this->assertFalse( $data['connected'] );
+		$this->assertIsArray( $data['strikingDistance'] );
+		$this->assertIsArray( $data['lowCtrPages'] );
+	}
+
+	public function test_gsc_opportunities_without_signature_is_unauthorized() {
+		$response = rest_get_server()->dispatch( new \WP_REST_Request( 'GET', self::GSC_ROUTE ) );
+		$this->assertSame( 401, $response->get_status() );
 	}
 
 	/**
