@@ -450,6 +450,44 @@ class Database {
 	}
 
 	/**
+	 * "Striking-distance" queries: terms ranking just off the money (page 1-2) with
+	 * real demand — small wins move them up. High impressions, position in a band,
+	 * ordered by impressions so the biggest opportunities surface first.
+	 *
+	 * @param string $property Property URL.
+	 * @param int    $days     Look-back window.
+	 * @param int    $min_impr Minimum impressions to qualify.
+	 * @param float  $min_pos  Lower position bound (e.g. 5 — already top-5 excluded).
+	 * @param float  $max_pos  Upper position bound (e.g. 20 — page 2).
+	 * @param int    $limit    Max rows.
+	 * @return array
+	 */
+	public static function striking_distance_queries( $property, $days = 28, $min_impr = 50, $min_pos = 5.0, $max_pos = 20.0, $limit = 30 ) {
+		global $wpdb;
+		$since = gmdate( 'Y-m-d', strtotime( "-{$days} days" ) );
+		$table = self::table();
+
+		// Table name from $wpdb->prefix is safe; values are prepared below.
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$sql = "SELECT query AS label,
+					SUM(clicks) clicks,
+					SUM(impressions) impressions,
+					(SUM(clicks)/NULLIF(SUM(impressions),0)) ctr,
+					AVG(position) position
+				 FROM {$table}
+				 WHERE property_url=%s AND query<>'' AND page_url='' AND date>=%s
+				 GROUP BY query
+				 HAVING impressions>=%d AND position>=%f AND position<=%f
+				 ORDER BY impressions DESC LIMIT %d";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom plugin table; no caching for analytics read.
+		return $wpdb->get_results(
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql contains only a safe $wpdb->prefix table name; all values are prepared.
+			$wpdb->prepare( $sql, $property, $since, $min_impr, $min_pos, $max_pos, $limit ),
+			ARRAY_A
+		);
+	}
+
+	/**
 	 * Headline totals for two adjacent windows, for drop detection / KPIs.
 	 *
 	 * @param string $property Property URL.

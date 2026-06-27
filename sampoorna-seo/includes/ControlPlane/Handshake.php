@@ -123,6 +123,15 @@ class Handshake {
 				'permission_callback' => array( $this, 'verify_request' ),
 			)
 		);
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/gsc/opportunities',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'handle_gsc_opportunities' ),
+				'permission_callback' => array( $this, 'verify_request' ),
+			)
+		);
 	}
 
 	/**
@@ -245,6 +254,40 @@ class Handshake {
 	}
 
 	/**
+	 * GET /gsc/opportunities — search opportunities mined from GSC performance data:
+	 * "striking-distance" queries (real demand ranking just off page 1) and high-
+	 * impression / low-CTR pages (title + meta rewrite candidates). Empty + connected
+	 * false when no GSC property is selected.
+	 *
+	 * @param \WP_REST_Request $request Incoming request.
+	 * @return \WP_REST_Response
+	 */
+	public function handle_gsc_opportunities( $request ) {
+		unset( $request );
+		$property = (string) \Sampoorna\SEO\Integrations\GSC\OAuth::instance()->selected_property();
+		if ( '' === $property ) {
+			return new \WP_REST_Response(
+				array(
+					'connected'        => false,
+					'property'         => '',
+					'strikingDistance' => array(),
+					'lowCtrPages'      => array(),
+				),
+				200
+			);
+		}
+		return new \WP_REST_Response(
+			array(
+				'connected'        => true,
+				'property'         => $property,
+				'strikingDistance' => \Sampoorna\SEO\Core\Database::striking_distance_queries( $property, 28, 50, 5.0, 20.0, 30 ),
+				'lowCtrPages'      => \Sampoorna\SEO\Core\Database::low_ctr_pages( $property, 28, 100, 0.01, 20.0, 30 ),
+			),
+			200
+		);
+	}
+
+	/**
 	 * The site descriptor returned to the control plane.
 	 *
 	 * @return array<string,mixed>
@@ -257,8 +300,9 @@ class Handshake {
 			'site_url'       => home_url( '/' ),
 			'key_id'         => Keys::key_id(),
 			'modules'        => array(
-				'meta'          => true,
-				'gsc_connected' => \Sampoorna\SEO\Integrations\GSC\OAuth::instance()->is_connected(),
+				'meta'              => true,
+				'gsc_connected'     => \Sampoorna\SEO\Integrations\GSC\OAuth::instance()->is_connected(),
+				'gsc_opportunities' => true, // exposes GET /gsc/opportunities (plugin >= 0.2.0)
 			),
 			'time'           => time(),
 		);

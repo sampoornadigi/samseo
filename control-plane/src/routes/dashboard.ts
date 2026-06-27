@@ -20,6 +20,7 @@ import {
 } from '../repo/pipeline.js';
 import { explainLatestAudit } from '../services/auditExplain.js';
 import { generateAeo } from '../services/aeoGenerate.js';
+import { pullGscOpportunities } from '../client/siteClient.js';
 import { addPrompt, citationSummary, latestResults, listPrompts } from '../repo/citation.js';
 import { siteIdsForUsername, idForUsername, setUserSites } from '../repo/users.js';
 import { readSession } from '../auth/session.js';
@@ -262,6 +263,24 @@ export function registerDashboard(app: FastifyInstance): void {
       ? await generateAeo({ ...form, siteLabel: ctx.site.label || ctx.site.site_url })
       : null;
     return reply.view('aeo.ejs', { title: 'AI search content', user: ctx.me, site: ctx.site, result, form, attempted: !!form.topic });
+  });
+
+  // GSC content-gap / search-opportunities miner: pull striking-distance queries +
+  // low-CTR pages live from the site (plugin >= 0.2.0) and render them.
+  app.get('/sites/:id/gsc', async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
+    const ctx = await aeoGuard(request, reply);
+    if (!ctx) return reply;
+    const secret = await secretFor(ctx.site.key_id);
+    let opp = null;
+    let error: string | null = null;
+    if (secret === null) {
+      error = 'This site has no shared secret configured.';
+    } else {
+      const r = await pullGscOpportunities(ctx.site, secret);
+      if (r.ok && r.data) opp = r.data;
+      else error = r.status === 404 ? 'This site’s plugin is too old for search opportunities (needs v0.2.0+).' : (r.error ?? 'Could not reach the site.');
+    }
+    return reply.view('gsc.ejs', { title: 'Search opportunities', user: ctx.me, site: ctx.site, opp, error });
   });
 
   app.post(

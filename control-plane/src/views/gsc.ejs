@@ -1,0 +1,61 @@
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+    <h2 style="margin:0;font-size:15px;">Search opportunities &mdash; <%= site.label || site.site_url || site.key_id %></h2>
+    <a class="btn" href="/sites/<%= site.id %>">&larr; Back to site</a>
+  </div>
+  <p class="muted" style="margin-top:0;">Mined from your Google Search Console data (last 28 days): the quickest wins to get more traffic from search you&rsquo;re <em>almost</em> ranking for.</p>
+
+  <% if (error) { %>
+    <div class="alert alert-info" style="margin-top:8px;"><%= error %></div>
+  <% } else if (opp && !opp.connected) { %>
+    <div class="alert alert-info" style="margin-top:8px;">Google Search Console isn&rsquo;t connected for this site yet. Connect it in the plugin to see opportunities.</div>
+  <% } else if (opp) { %>
+    <p class="muted" style="margin:0 0 14px;font-size:12px;">Property: <code><%= opp.property %></code></p>
+
+    <h3 style="font-size:14px;margin:10px 0 4px;">Striking-distance keywords <span class="muted" style="font-weight:400;">(ranking just off page 1)</span></h3>
+    <p class="muted" style="margin-top:0;">Real demand, ranking positions ~5&ndash;20. Strengthen the matching page (title, headings, depth, internal links) to push these onto page 1.</p>
+    <% if (!opp.strikingDistance || opp.strikingDistance.length === 0) { %>
+      <p class="muted">No striking-distance keywords found in this window.</p>
+    <% } else { %>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Keyword</th><th>Impressions</th><th>Position</th><th>CTR</th></tr></thead>
+          <tbody>
+            <% opp.strikingDistance.forEach(function (r) { %>
+              <tr>
+                <td><%= r.label %></td>
+                <td><%= Number(r.impressions).toLocaleString() %></td>
+                <td><%= Number(r.position).toFixed(1) %></td>
+                <td><%= (Number(r.ctr) * 100).toFixed(1) %>%</td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <h3 style="font-size:14px;margin:22px 0 4px;">High-impression, low-CTR pages <span class="muted" style="font-weight:400;">(title / meta rewrite)</span></h3>
+    <p class="muted" style="margin-top:0;">These pages are SEEN a lot but rarely clicked &mdash; a sharper title + meta description (try the AI content tool) usually lifts clicks fast.</p>
+    <% if (!opp.lowCtrPages || opp.lowCtrPages.length === 0) { %>
+      <p class="muted">No low-CTR pages found in this window.</p>
+    <% } else { %>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Page</th><th>Impressions</th><th>Position</th><th>CTR</th></tr></thead>
+          <tbody>
+            <% opp.lowCtrPages.forEach(function (r) { %>
+              <tr>
+                <td style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><%= r.page_url %></td>
+                <td><%= Number(r.impressions).toLocaleString() %></td>
+                <td><%= Number(r.position).toFixed(1) %></td>
+                <td><%= (Number(r.ctr) * 100).toFixed(1) %>%</td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <p class="muted" style="margin-top:18px;font-size:12px;">Keyword cannibalization (one query splitting clicks across several of your pages) needs query&times;page Search Console data &mdash; coming once your plugin syncs the combined dimension.</p>
+  <% } %>
+</div>

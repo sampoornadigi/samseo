@@ -3,7 +3,7 @@
  * Plugin Name:       Sampoorna SEO
  * Plugin URI:        https://sampoornadigi.com/sampoorna-seo
  * Description:        Agency SEO engine for Sampoorna Digi Branding. Seed module: Google Search Console integration (OAuth 2.0) — performance tracking, on-page/indexing issues, fix suggestions, and email digests, inside wp-admin.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 6.0
  * Requires PHP:      8.1
  * Author:            LSN Soft
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // No direct access.
 }
 
-define( 'SAMPOORNA_SEO_VERSION', '0.1.0' );
+define( 'SAMPOORNA_SEO_VERSION', '0.2.0' );
 define( 'SAMPOORNA_SEO_FILE', __FILE__ );
 define( 'SAMPOORNA_SEO_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SAMPOORNA_SEO_URL', plugin_dir_url( __FILE__ ) );

@@ -17,6 +17,7 @@ const AUDIT_ROUTE = '/sampoorna-seo/v1/audit';
 const APPLY_ROUTE = '/sampoorna-seo/v1/apply';
 const ROLLBACK_ROUTE = '/sampoorna-seo/v1/rollback';
 const ACTION_ROUTE = '/sampoorna-seo/v1/action';
+const GSC_OPPORTUNITIES_ROUTE = '/sampoorna-seo/v1/gsc/opportunities';
 
 /** Signed GET to a site route with an empty body; returns parsed JSON or an error. */
 async function signedGet<T>(site: Site, secret: string, route: string): Promise<{ ok: boolean; status: number; data?: T; error?: string }> {
@@ -117,6 +118,25 @@ export async function deploy(
   changes: Change[],
 ): Promise<{ ok: boolean; status: number; data?: unknown; error?: string }> {
   return signedPost(site, secret, APPLY_ROUTE, { deploy_id: deployId, changes });
+}
+
+/** A query-dimension GSC row (striking-distance) — `label` is the search query. */
+export interface GscQueryRow { label: string; clicks: number; impressions: number; ctr: number; position: number }
+/** A page-dimension GSC row (low-CTR pages) — `page_url` is the URL. */
+export interface GscPageRow { page_url: string; clicks: number; impressions: number; ctr: number; position: number }
+export interface GscOpportunities {
+  connected: boolean;
+  property: string;
+  strikingDistance: GscQueryRow[];
+  lowCtrPages: GscPageRow[];
+}
+
+/** Pull mined GSC search opportunities from the site (plugin >= 0.2.0). */
+export async function pullGscOpportunities(
+  site: Site,
+  secret: string,
+): Promise<{ ok: boolean; status: number; data?: GscOpportunities; error?: string }> {
+  return signedGet<GscOpportunities>(site, secret, GSC_OPPORTUNITIES_ROUTE);
 }
 
 /** Run an allow-listed bulk maintenance action on the site. */
