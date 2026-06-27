@@ -124,11 +124,14 @@ export async function deploy(
 export interface GscQueryRow { label: string; clicks: number; impressions: number; ctr: number; position: number }
 /** A page-dimension GSC row (low-CTR pages) — `page_url` is the URL. */
 export interface GscPageRow { page_url: string; clicks: number; impressions: number; ctr: number; position: number }
+/** A cannibalizing query — `pages` of the site compete for the same `label` term. */
+export interface GscCannibalRow { label: string; pages: number; impressions: number; clicks: number; best_position: number }
 export interface GscOpportunities {
   connected: boolean;
   property: string;
   strikingDistance: GscQueryRow[];
   lowCtrPages: GscPageRow[];
+  cannibalization?: GscCannibalRow[];
 }
 
 /** Pull mined GSC search opportunities from the site (plugin >= 0.2.0). */

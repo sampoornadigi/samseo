@@ -488,6 +488,43 @@ class Database {
 	}
 
 	/**
+	 * Keyword cannibalization: queries where more than one of the site's pages
+	 * ranks, splitting clicks/authority. Reads the combined page×query rows (both
+	 * non-empty). Ordered by impressions so the biggest bleed surfaces first.
+	 *
+	 * @param string $property  Property URL.
+	 * @param int    $days      Look-back window.
+	 * @param int    $min_impr  Minimum total impressions to qualify.
+	 * @param int    $min_pages Minimum competing pages (>=2).
+	 * @param int    $limit     Max rows.
+	 * @return array
+	 */
+	public static function cannibalizing_queries( $property, $days = 28, $min_impr = 30, $min_pages = 2, $limit = 30 ) {
+		global $wpdb;
+		$since = gmdate( 'Y-m-d', strtotime( "-{$days} days" ) );
+		$table = self::table();
+
+		// Table name from $wpdb->prefix is safe; values are prepared below.
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$sql = "SELECT query AS label,
+					COUNT(DISTINCT page_url) AS pages,
+					SUM(impressions) AS impressions,
+					SUM(clicks) AS clicks,
+					MIN(position) AS best_position
+				 FROM {$table}
+				 WHERE property_url=%s AND query<>'' AND page_url<>'' AND date>=%s
+				 GROUP BY query
+				 HAVING pages >= %d AND impressions >= %d
+				 ORDER BY impressions DESC LIMIT %d";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom plugin table; no caching for analytics read.
+		return $wpdb->get_results(
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql contains only a safe $wpdb->prefix table name; all values are prepared.
+			$wpdb->prepare( $sql, $property, $since, $min_pages, $min_impr, $limit ),
+			ARRAY_A
+		);
+	}
+
+	/**
 	 * Headline totals for two adjacent windows, for drop detection / KPIs.
 	 *
 	 * @param string $property Property URL.

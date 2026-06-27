@@ -132,6 +132,18 @@ class Sync {
 			$log['by_query'] = count( $by_query );
 		}
 
+		// 4) By page x query (combined) — rows with BOTH set, so we can detect
+		// cannibalization (one query split across several of the site's pages).
+		$by_page_query = Api::search_analytics( $property, $start, $end, array( 'date', 'page', 'query' ), 25000 );
+		if ( is_wp_error( $by_page_query ) ) {
+			$log['errors'][] = $by_page_query->get_error_message();
+		} else {
+			foreach ( $by_page_query as $row ) {
+				Database::upsert_row( $property, $row );
+			}
+			$log['by_page_query'] = count( $by_page_query );
+		}
+
 		update_option( self::OPT_LAST_SYNC, current_time( 'mysql' ), false );
 		update_option( self::OPT_LAST_LOG, $log, false );
 		return true;

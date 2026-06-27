@@ -282,6 +282,7 @@ class Handshake {
 				'property'         => $property,
 				'strikingDistance' => \Sampoorna\SEO\Core\Database::striking_distance_queries( $property, 28, 50, 5.0, 20.0, 30 ),
 				'lowCtrPages'      => \Sampoorna\SEO\Core\Database::low_ctr_pages( $property, 28, 100, 0.01, 20.0, 30 ),
+				'cannibalization'  => \Sampoorna\SEO\Core\Database::cannibalizing_queries( $property, 28, 30, 2, 30 ),
 			),
 			200
 		);

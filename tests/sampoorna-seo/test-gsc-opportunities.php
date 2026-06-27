@@ -26,6 +26,12 @@ class Sampoorna_Seo_Gsc_Opportunities_Test extends WP_UnitTestCase {
 
 		// Page-dimension row (query=''): a high-impression, low-CTR page.
 		$this->seed( array( 'page' => 'https://venora.example/kitchens', 'date' => $today, 'clicks' => 1, 'impressions' => 400, 'ctr' => 0.0025, 'position' => 9.0 ) );
+
+		// Combined page×query rows: 'kitchen design' ranks on TWO pages (cannibalization);
+		// 'sofa repair' on one (not). Both page + query non-empty.
+		$this->seed( array( 'page' => 'https://venora.example/a', 'query' => 'kitchen design', 'date' => $today, 'clicks' => 5, 'impressions' => 200, 'ctr' => 0.025, 'position' => 7.0 ) );
+		$this->seed( array( 'page' => 'https://venora.example/b', 'query' => 'kitchen design', 'date' => $today, 'clicks' => 3, 'impressions' => 150, 'ctr' => 0.02, 'position' => 12.0 ) );
+		$this->seed( array( 'page' => 'https://venora.example/c', 'query' => 'sofa repair', 'date' => $today, 'clicks' => 2, 'impressions' => 100, 'ctr' => 0.02, 'position' => 8.0 ) );
 	}
 
 	private function seed( array $row ) {
@@ -46,5 +52,15 @@ class Sampoorna_Seo_Gsc_Opportunities_Test extends WP_UnitTestCase {
 		$rows   = Database::low_ctr_pages( self::PROPERTY, 28, 100, 0.01, 20.0, 30 );
 		$pages  = array_column( $rows, 'page_url' );
 		$this->assertContains( 'https://venora.example/kitchens', $pages );
+	}
+
+	public function test_cannibalization_flags_a_query_split_across_pages() {
+		$rows   = Database::cannibalizing_queries( self::PROPERTY, 28, 30, 2, 30 );
+		$labels = array_column( $rows, 'label' );
+		$this->assertContains( 'kitchen design', $labels );
+		$this->assertNotContains( 'sofa repair', $labels, 'a single-page query is not cannibalization' );
+		$hit = array_values( array_filter( $rows, fn( $r ) => 'kitchen design' === $r['label'] ) )[0];
+		$this->assertEquals( 2, (int) $hit['pages'] );
+		$this->assertEquals( 350, (int) $hit['impressions'] );
 	}
 }

@@ -56,6 +56,26 @@
       </div>
     <% } %>
 
-    <p class="muted" style="margin-top:18px;font-size:12px;">Keyword cannibalization (one query splitting clicks across several of your pages) needs query&times;page Search Console data &mdash; coming once your plugin syncs the combined dimension.</p>
+    <h3 style="font-size:14px;margin:22px 0 4px;">Keyword cannibalization <span class="muted" style="font-weight:400;">(your pages competing with each other)</span></h3>
+    <p class="muted" style="margin-top:0;">More than one of your pages ranks for the same query, splitting clicks and authority. Pick one page to be the canonical answer and point the others at it (internal links / consolidate / de-optimise).</p>
+    <% if (!opp.cannibalization || opp.cannibalization.length === 0) { %>
+      <p class="muted">No cannibalization detected in this window.</p>
+    <% } else { %>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Keyword</th><th>Competing pages</th><th>Impressions</th><th>Best position</th></tr></thead>
+          <tbody>
+            <% opp.cannibalization.forEach(function (r) { %>
+              <tr>
+                <td><%= r.label %></td>
+                <td><%= Number(r.pages).toLocaleString() %></td>
+                <td><%= Number(r.impressions).toLocaleString() %></td>
+                <td><%= Number(r.best_position).toFixed(1) %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
   <% } %>
 </div>
