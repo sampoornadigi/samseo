@@ -303,6 +303,7 @@ class Handshake {
 				'meta'              => true,
 				'gsc_connected'     => \Sampoorna\SEO\Integrations\GSC\OAuth::instance()->is_connected(),
 				'gsc_opportunities' => true, // Exposes GET /gsc/opportunities (plugin 0.2.0+).
+				'embeds'            => \Sampoorna\SEO\Platform\Embeds::active(), // Single-plugin: analytics + chat widget.
 			),
 			'time'           => time(),
 		);

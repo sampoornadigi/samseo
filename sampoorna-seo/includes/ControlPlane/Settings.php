@@ -19,6 +19,7 @@ use Sampoorna\SEO\Technical\IndexNow;
 use Sampoorna\SEO\Schema\Graph;
 use Sampoorna\SEO\Geo\LlmsTxt;
 use Sampoorna\SEO\Integrations\GSC\Reports;
+use Sampoorna\SEO\Platform\Embeds;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -47,6 +48,12 @@ class Settings {
 			'llms_intro'       => array( LlmsTxt::OPT_INTRO, 'textarea' ),
 			'digest_enabled'   => array( Reports::OPT_ENABLED, 'bool' ),
 			'digest_freq'      => array( Reports::OPT_FREQ, 'enum:daily|weekly' ),
+			// Platform embeds — the plane provisions these so one plugin wires up
+			// AdSync analytics + the CRM chat widget (no script tags pasted by hand).
+			'analytics_key'    => array( Embeds::OPT_ANALYTICS_KEY, 'text' ),
+			'analytics_base'   => array( Embeds::OPT_ANALYTICS_BASE, 'url' ),
+			'widget_key'       => array( Embeds::OPT_WIDGET_KEY, 'text' ),
+			'widget_base'      => array( Embeds::OPT_WIDGET_BASE, 'url' ),
 		);
 	}
 

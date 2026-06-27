@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Sampoorna SEO
  * Plugin URI:        https://sampoornadigi.com/sampoorna-seo
- * Description:        Agency SEO engine for Sampoorna Digi Branding. Seed module: Google Search Console integration (OAuth 2.0) — performance tracking, on-page/indexing issues, fix suggestions, and email digests, inside wp-admin.
- * Version:           0.2.0
+ * Description:        The one Sampoorna plugin for your site: SEO (meta, schema, GEO/AEO, sitemaps), Google Search Console tracking + fixes, lead capture to the CRM, and — wired automatically by the platform — AdSync first-party analytics and the CRM AI chat widget. One install lights up the whole stack.
+ * Version:           0.3.0
  * Requires at least: 6.0
  * Requires PHP:      8.1
  * Author:            LSN Soft
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // No direct access.
 }
 
-define( 'SAMPOORNA_SEO_VERSION', '0.2.0' );
+define( 'SAMPOORNA_SEO_VERSION', '0.3.0' );
 define( 'SAMPOORNA_SEO_FILE', __FILE__ );
 define( 'SAMPOORNA_SEO_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SAMPOORNA_SEO_URL', plugin_dir_url( __FILE__ ) );
@@ -107,6 +107,10 @@ function sampoorna_seo_init() {
 	// Lead capture: forward form submissions (CF7/WPForms/Gravity/Ninja) to the
 	// control plane -> seo.lead.captured -> CRM contact (Phase 4 SEO->CRM flow).
 	\Sampoorna\SEO\Integrations\Leads\LeadCapture::instance()->register();
+
+	// Platform embeds: the single-plugin story — inject the AdSync analytics SDK +
+	// the CRM chat widget when their (control-plane-provisioned) keys are set.
+	\Sampoorna\SEO\Platform\Embeds::instance();
 
 	if ( is_admin() ) {
 		\Sampoorna\SEO\Admin\Screens::instance();
