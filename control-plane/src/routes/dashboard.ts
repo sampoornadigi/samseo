@@ -21,6 +21,7 @@ import {
 import { explainLatestAudit } from '../services/auditExplain.js';
 import { generateAeo } from '../services/aeoGenerate.js';
 import { pullGscOpportunities } from '../client/siteClient.js';
+import { provisionSite } from '../platform/provisioning.js';
 import { addPrompt, citationSummary, latestResults, listPrompts } from '../repo/citation.js';
 import { siteIdsForUsername, idForUsername, setUserSites } from '../repo/users.js';
 import { readSession } from '../auth/session.js';
@@ -123,6 +124,14 @@ export function registerDashboard(app: FastifyInstance): void {
       if (session?.role === 'client' && platformTenantId) {
         const uid = await idForUsername(session.username);
         if (uid != null) await setUserSites(uid, await siteIdsForTenant(platformTenantId));
+      }
+      // Zero-touch: push the tenant's platform embed keys to the freshly-enrolled
+      // site so the chat widget (+ analytics) light up. Best-effort — never fails
+      // the enrollment.
+      if (platformTenantId) {
+        const r = await provisionSite({ reach_url: reachUrl, key_id: keyId }, secret, platformTenantId);
+        if (!r.ok && r.error) request.log.warn(`provisioning: ${r.error}`);
+        else if (r.pushed.length) request.log.info(`provisioned ${r.pushed.join(', ')} to ${keyId}`);
       }
     } catch (err) {
       const msg = err instanceof Error && /unique/i.test(err.message)
@@ -263,6 +272,18 @@ export function registerDashboard(app: FastifyInstance): void {
       ? await generateAeo({ ...form, siteLabel: ctx.site.label || ctx.site.site_url })
       : null;
     return reply.view('aeo.ejs', { title: 'AI search content', user: ctx.me, site: ctx.site, result, form, attempted: !!form.topic });
+  });
+
+  // Re-push the tenant's platform embed keys (chat widget / analytics) to the site.
+  app.post('/sites/:id/provision', async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
+    const ctx = await aeoGuard(request, reply);
+    if (!ctx) return reply;
+    const secret = await secretFor(ctx.site.key_id);
+    if (secret !== null && ctx.site.platform_tenant_id) {
+      const r = await provisionSite(ctx.site, secret, ctx.site.platform_tenant_id);
+      if (!r.ok && r.error) request.log.warn(`re-provision: ${r.error}`);
+    }
+    return reply.redirect(`/sites/${ctx.site.id}`);
   });
 
   // GSC content-gap / search-opportunities miner: pull striking-distance queries +

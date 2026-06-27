@@ -4,9 +4,14 @@
     <a class="btn" href="/">&larr; All sites</a>
   </div>
   <p class="muted" style="margin-top:0;"><%= site.site_url || site.reach_url %> &middot; <code><%= site.key_id %></code></p>
-  <p style="margin:0 0 4px;display:flex;gap:8px;flex-wrap:wrap;">
+  <p style="margin:0 0 4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
     <a class="btn" href="/sites/<%= site.id %>/aeo">&#10024; Generate AI search content</a>
     <a class="btn" href="/sites/<%= site.id %>/gsc">&#128200; Search opportunities</a>
+    <% if (site.platform_tenant_id) { %>
+      <form class="inline" method="post" action="/sites/<%= site.id %>/provision" style="margin:0;">
+        <button class="btn" type="submit" title="Push the CRM chat widget + analytics keys to this site">&#128268; Re-provision embeds</button>
+      </form>
+    <% } %>
   </p>
 
   <% if (user && user.role === 'admin') { %>
