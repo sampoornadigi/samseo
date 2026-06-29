@@ -20,6 +20,8 @@ import {
 } from '../repo/pipeline.js';
 import { explainLatestAudit } from '../services/auditExplain.js';
 import { generateAeo } from '../services/aeoGenerate.js';
+import { consumeLlmCall } from '../repo/llmBudget.js';
+import { config } from '../config.js';
 import { pullGscOpportunities } from '../client/siteClient.js';
 import { provisionSite } from '../platform/provisioning.js';
 import { addPrompt, citationSummary, latestResults, listPrompts } from '../repo/citation.js';
@@ -240,6 +242,9 @@ export function registerDashboard(app: FastifyInstance): void {
       const allowed = new Set(await siteIdsForUsername(me.username));
       if (!allowed.has(id)) return reply.code(403).send('Forbidden');
     }
+    if (site.platform_tenant_id && !(await consumeLlmCall(site.platform_tenant_id, config.seoLlmDailyLimit))) {
+      return reply.code(429).send('Daily AI limit reached for this client. Please try again tomorrow.');
+    }
     await explainLatestAudit(id, { force: true });
     return reply.redirect(`/sites/${site.id}`);
   });
@@ -268,6 +273,9 @@ export function registerDashboard(app: FastifyInstance): void {
     if (!ctx) return reply;
     const b = request.body ?? {};
     const form = { topic: (b.topic ?? '').trim(), url: (b.url ?? '').trim(), notes: (b.notes ?? '').trim() };
+    if (form.topic && ctx.site.platform_tenant_id && !(await consumeLlmCall(ctx.site.platform_tenant_id, config.seoLlmDailyLimit))) {
+      return reply.code(429).send('Daily AI limit reached for this client. Please try again tomorrow.');
+    }
     const result = form.topic
       ? await generateAeo({ ...form, siteLabel: ctx.site.label || ctx.site.site_url })
       : null;

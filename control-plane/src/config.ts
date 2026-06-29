@@ -45,4 +45,6 @@ export const config = {
   pagespeedKey: process.env.CP_PAGESPEED_KEY ?? '',
   /** PageSpeed strategy: 'mobile' (default) or 'desktop'. */
   pagespeedStrategy: process.env.CP_PAGESPEED_STRATEGY ?? 'mobile',
+  /** Max on-demand LLM calls per client per day (audit explain + AEO generate). */
+  seoLlmDailyLimit: Number(process.env.CP_LLM_DAILY_LIMIT ?? 30),
 } as const;
