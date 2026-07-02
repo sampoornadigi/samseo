@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { enroll, getById, list, secretFor, setSiteTenant, siteIdsForTenant } from '../repo/sites.js';
+import { pendingCounts, pendingCountFor, replayForSite } from '../repo/unroutedLeads.js';
 import { listCrmTenants } from '../platform/crmTenants.js';
 import { tenantIdFromClientUsername } from './sso-user.js';
 import { deploy, rollback, runAction } from '../client/siteClient.js';
@@ -53,7 +54,10 @@ export function registerDashboard(app: FastifyInstance): void {
       const h = health.get(s.id);
       healthBySite[s.id] = h ? h.overall : null;
     }
-    return reply.view('sites.ejs', { title: 'Sites', user: readSession(request), sites, health: healthBySite, now: Date.now() });
+    const parked = await pendingCounts();
+    const parkedBySite: Record<number, number> = {};
+    for (const s of sites) parkedBySite[s.id] = parked.get(s.id) ?? 0;
+    return reply.view('sites.ejs', { title: 'Sites', user: readSession(request), sites, health: healthBySite, parked: parkedBySite, now: Date.now() });
   });
 
   app.get('/sites/:id', async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
@@ -88,6 +92,7 @@ export function registerDashboard(app: FastifyInstance): void {
       citations,
       citation,
       clients: await listCrmTenants(),
+      parkedLeads: await pendingCountFor(id),
     });
   });
 
@@ -154,6 +159,11 @@ export function registerDashboard(app: FastifyInstance): void {
     }
     const tenantId = (request.body?.platform_tenant_id ?? '').trim() || null;
     await setSiteTenant(id, tenantId);
+    // Mapping unblocks routing: replay any leads parked while the site was unmapped.
+    if (tenantId) {
+      const replayed = await replayForSite(id, tenantId);
+      if (replayed > 0) request.log.info(`replayed ${replayed} parked lead(s) for site ${id} → tenant ${tenantId}`);
+    }
     return reply.redirect(`/sites/${id}`);
   });
 

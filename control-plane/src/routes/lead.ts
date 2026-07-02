@@ -15,6 +15,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { verify } from '../crypto/signer.js';
 import { config } from '../config.js';
 import { secretFor } from '../repo/sites.js';
+import { saveUnrouted } from '../repo/unroutedLeads.js';
 import { pool } from '../db/pool.js';
 
 const ROUTE = '/sites/lead';
@@ -63,32 +64,35 @@ export function registerLead(app: FastifyInstance): void {
     );
     const site = rows[0];
     if (!site) return reply.code(401).send({ error: 'unknown key id' });
+
+    const b = (request.body ?? {}) as LeadBody;
+    // Same shape whether routed now or replayed later — replay is a drop-in.
+    const data = {
+      name: b.name,
+      phone: b.phone,
+      email: b.email,
+      utm: b.utm ?? {},
+      gclid: b.gclid,
+      fbclid: b.fbclid,
+      landingPage: b.landingPage,
+      referrer: b.referrer,
+      // The SEO site the lead came from — lets the CRM record the origin in
+      // the identity graph (cross-product "which site brings leads").
+      site: site.label || site.site_url || `site-${site.id}`,
+    };
+
     if (!site.platform_tenant_id) {
-      request.log.warn(`lead for unmapped site ${site.id} — set platform_tenant_id to route it`);
+      // Never fail the visitor's form submission — but never drop the lead
+      // either: park it, and it replays when the site is mapped to a tenant.
+      await saveUnrouted(site.id, data);
+      request.log.warn(`lead for unmapped site ${site.id} parked — map platform_tenant_id to route it`);
       return reply.code(202).send({ lead: 'accepted_unrouted' });
     }
 
-    const b = (request.body ?? {}) as LeadBody;
     await pool.query(
       `INSERT INTO outbox (event_id, type, version, tenant_id, source, data)
        VALUES ($1, 'seo.lead.captured', 1, $2, 'seo', $3)`,
-      [
-        `evt_${randomUUID()}`,
-        site.platform_tenant_id,
-        JSON.stringify({
-          name: b.name,
-          phone: b.phone,
-          email: b.email,
-          utm: b.utm ?? {},
-          gclid: b.gclid,
-          fbclid: b.fbclid,
-          landingPage: b.landingPage,
-          referrer: b.referrer,
-          // The SEO site the lead came from — lets the CRM record the origin in
-          // the identity graph (cross-product "which site brings leads").
-          site: site.label || site.site_url || `site-${site.id}`,
-        }),
-      ],
+      [`evt_${randomUUID()}`, site.platform_tenant_id, JSON.stringify(data)],
     );
     return reply.code(200).send({ lead: 'captured' });
   });
