@@ -7,6 +7,8 @@ node_modules/
 
 # Build & release artifacts
 *.zip
+# ...except the plugin package the control plane serves at /downloads
+!control-plane/public/sampoorna-seo.zip
 /dist/
 /dist*/
 /wpscm-src-*/

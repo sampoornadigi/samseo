@@ -6,6 +6,7 @@
  * parsing for the dashboard, and the route groups.
  */
 
+import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Fastify, { type FastifyRequest } from 'fastify';
@@ -32,7 +33,7 @@ const viewsDir = join(dirname(fileURLToPath(import.meta.url)), 'views');
 
 // Paths reachable without a dashboard session: health, the login form, and the
 // HMAC-signed site→plane announce endpoint (authenticated by its own signature).
-const PUBLIC_PATHS = new Set(['/healthz', '/login', '/sites/announce', '/sites/lead', '/sso']);
+const PUBLIC_PATHS = new Set(['/healthz', '/login', '/sites/announce', '/sites/lead', '/sso', '/downloads/sampoorna-seo.zip']);
 
 export async function build() {
   const app = Fastify({ logger: true });
@@ -95,6 +96,18 @@ export async function build() {
   });
 
   app.get('/healthz', async () => ({ ok: true }));
+
+  // The WordPress plugin, downloadable straight from the enroll page — so a new
+  // site can be connected without hunting for the zip out-of-band. Public (GPL).
+  app.get('/downloads/sampoorna-seo.zip', async (_request, reply) => {
+    const zipPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'sampoorna-seo.zip');
+    const zip = await readFile(zipPath).catch(() => null);
+    if (!zip) return reply.code(404).send({ error: 'plugin package not found' });
+    return reply
+      .header('content-type', 'application/zip')
+      .header('content-disposition', 'attachment; filename="sampoorna-seo.zip"')
+      .send(zip);
+  });
   registerAuth(app);
   registerAnnounce(app);
   registerDashboard(app);
