@@ -20,6 +20,11 @@
       <p class="muted" style="margin:0 0 8px;font-size:12px;">
         <% if (site.platform_tenant_id) { %>Mapped to <code><%= site.platform_tenant_id %></code> — this client's login sees this site.<% } else { %>Not mapped to a client yet. Paste the tenant id from the CRM Clients list so their login can see this site.<% } %>
       </p>
+      <% if (typeof parkedLeads !== 'undefined' && parkedLeads > 0) { %>
+        <p style="margin:0 0 8px;font-size:12.5px;color:#b91c1c;font-weight:600;">
+          ⚠ <%= parkedLeads %> lead<%= parkedLeads === 1 ? '' : 's' %> captured while unmapped — they route into the CRM the moment you assign a client below.
+        </p>
+      <% } %>
       <form method="post" action="/sites/<%= site.id %>/tenant" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0;">
         <% var hasClients = (typeof clients !== 'undefined') && clients && clients.length > 0; %>
         <% if (hasClients) { %>

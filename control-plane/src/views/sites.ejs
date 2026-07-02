@@ -57,7 +57,10 @@
           <% if (isAdmin) { %><td><input class="bulk-cb" type="checkbox" form="bulkform" name="sites" value="<%= s.id %>"></td><% } %>
           <td>
             <strong><a href="/sites/<%= s.id %>"><%= s.label || s.site_url || s.key_id %></a></strong>
-            &nbsp;<a class="muted" href="/sites/<%= s.id %>/report" target="_blank" style="font-size:12px;">report&nbsp;↗</a><br>
+            &nbsp;<a class="muted" href="/sites/<%= s.id %>/report" target="_blank" style="font-size:12px;">report&nbsp;↗</a>
+            <% if (typeof parked !== 'undefined' && parked[s.id] > 0) { %>
+              &nbsp;<span class="pill pill--bad" title="Leads captured while this site had no client mapping — map it to route them into the CRM."><%= parked[s.id] %> unrouted lead<%= parked[s.id] === 1 ? '' : 's' %></span>
+            <% } %><br>
             <span class="muted"><%= s.site_url || s.reach_url %></span><br>
             <span class="muted"><code><%= s.key_id %></code></span>
           </td>
